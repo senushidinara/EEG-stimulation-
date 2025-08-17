@@ -323,27 +323,129 @@ class InteractiveBrainVisualizer {
         }
     }
 
-    addBrainRegions(brainGroup) {
+    addCerebellum(brainGroup) {
+        // Create cerebellum (little brain)
+        const cerebellumGeometry = new THREE.SphereGeometry(0.4, 32, 16);
+        const cerebellumMaterial = new THREE.MeshPhongMaterial({
+            color: 0xb8956f, // Slightly different color than cerebrum
+            shininess: 15
+        });
+
+        const cerebellum = new THREE.Mesh(cerebellumGeometry, cerebellumMaterial);
+        cerebellum.scale.set(1.2, 0.8, 1);
+        cerebellum.position.set(0, -0.7, -0.8);
+        brainGroup.add(cerebellum);
+
+        // Add cerebellar folia (folds)
+        this.addCerebellarFolia(cerebellum);
+    }
+
+    addCerebellarFolia(cerebellum) {
+        // Add characteristic cerebellar folding pattern
+        const foliaGeometry = new THREE.CylinderGeometry(0.01, 0.01, 0.6, 6);
+        const foliaMaterial = new THREE.MeshPhongMaterial({
+            color: 0xa0835b,
+            transparent: true,
+            opacity: 0.8
+        });
+
+        for (let i = 0; i < 12; i++) {
+            const folia = new THREE.Mesh(foliaGeometry, foliaMaterial);
+            const angle = (i / 12) * Math.PI * 2;
+            folia.position.set(
+                Math.cos(angle) * 0.3,
+                -0.7,
+                Math.sin(angle) * 0.3 - 0.8
+            );
+            folia.rotation.y = angle;
+            this.brain.add(folia);
+        }
+    }
+
+    addBrainStem(brainGroup) {
+        // Midbrain
+        const midbrainGeometry = new THREE.CylinderGeometry(0.15, 0.18, 0.3, 12);
+        const midbrainMaterial = new THREE.MeshPhongMaterial({ color: 0xa08570 });
+        const midbrain = new THREE.Mesh(midbrainGeometry, midbrainMaterial);
+        midbrain.position.set(0, -0.4, -0.3);
+        brainGroup.add(midbrain);
+
+        // Pons
+        const ponsGeometry = new THREE.CylinderGeometry(0.18, 0.2, 0.25, 12);
+        const ponsMaterial = new THREE.MeshPhongMaterial({ color: 0x957a65 });
+        const pons = new THREE.Mesh(ponsGeometry, ponsMaterial);
+        pons.position.set(0, -0.6, -0.4);
+        brainGroup.add(pons);
+
+        // Medulla oblongata
+        const medullaGeometry = new THREE.CylinderGeometry(0.12, 0.18, 0.4, 10);
+        const medullaMaterial = new THREE.MeshPhongMaterial({ color: 0x8a7055 });
+        const medulla = new THREE.Mesh(medullaGeometry, medullaMaterial);
+        medulla.position.set(0, -0.85, -0.5);
+        brainGroup.add(medulla);
+    }
+
+    addCorpusCallosum(brainGroup) {
+        // Corpus callosum - connects left and right hemispheres
+        const callosumGeometry = new THREE.BoxGeometry(0.03, 1.5, 0.8);
+        const callosumMaterial = new THREE.MeshPhongMaterial({
+            color: 0xf5f5dc, // White matter color
+            transparent: true,
+            opacity: 0.9
+        });
+
+        const corpusCallosum = new THREE.Mesh(callosumGeometry, callosumMaterial);
+        corpusCallosum.position.set(0, 0, 0);
+        brainGroup.add(corpusCallosum);
+    }
+
+    addAnatomicalRegions(brainGroup) {
+        // More anatomically accurate brain regions
         const regions = [
-            { name: 'Frontal', position: [0, 0.5, 0.7], color: 0x3498db },
-            { name: 'Parietal', position: [0, 0.3, -0.5], color: 0xe74c3c },
-            { name: 'Temporal', position: [-0.6, 0, 0.3], color: 0xf39c12 },
-            { name: 'Occipital', position: [0, -0.5, -0.7], color: 0x9b59b6 }
+            { name: 'Frontal Cortex', position: [0, 0.4, 0.8], color: 0x3498db, size: 0.08 },
+            { name: 'Parietal Cortex', position: [0, 0.6, -0.3], color: 0xe74c3c, size: 0.08 },
+            { name: 'Temporal Cortex', position: [-0.7, -0.2, 0.2], color: 0xf39c12, size: 0.08 },
+            { name: 'Occipital Cortex', position: [0, 0.1, -1.0], color: 0x9b59b6, size: 0.08 },
+            { name: 'Motor Cortex', position: [0, 0.3, 0.2], color: 0x2ecc71, size: 0.06 },
+            { name: 'Somatosensory', position: [0, 0.2, -0.1], color: 0xe67e22, size: 0.06 },
+            { name: 'Broca\'s Area', position: [-0.6, 0.2, 0.5], color: 0x1abc9c, size: 0.05 },
+            { name: 'Wernicke\'s Area', position: [-0.7, -0.1, -0.2], color: 0x34495e, size: 0.05 }
         ];
-        
+
         regions.forEach(region => {
-            const regionGeometry = new THREE.SphereGeometry(0.1, 8, 8);
+            const regionGeometry = new THREE.SphereGeometry(region.size, 12, 12);
             const regionMaterial = new THREE.MeshPhongMaterial({
                 color: region.color,
                 transparent: true,
-                opacity: 0.7
+                opacity: 0.6,
+                emissive: region.color,
+                emissiveIntensity: 0.1
             });
-            
+
             const regionMesh = new THREE.Mesh(regionGeometry, regionMaterial);
             regionMesh.position.set(...region.position);
             regionMesh.userData = { type: 'brain-region', name: region.name };
             brainGroup.add(regionMesh);
+
+            // Add pulsing animation for active regions
+            this.animateRegion(regionMesh);
         });
+    }
+
+    animateRegion(regionMesh) {
+        const originalScale = regionMesh.scale.clone();
+        const animate = () => {
+            if (regionMesh.userData.activity > 0.5) {
+                const pulse = Math.sin(Date.now() * 0.005) * 0.2 + 1;
+                regionMesh.scale.setScalar(originalScale.x * pulse);
+                regionMesh.material.emissiveIntensity = 0.1 + regionMesh.userData.activity * 0.3;
+            } else {
+                regionMesh.scale.copy(originalScale);
+                regionMesh.material.emissiveIntensity = 0.1;
+            }
+            requestAnimationFrame(animate);
+        };
+        animate();
     }
 
     createElectrodes() {
