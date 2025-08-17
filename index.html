@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brain Activation Visualization</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="header">
+            <h1 class="title">EEG Brain Activation Visualization</h1>
+            <p class="subtitle">Interactive analysis of brainwave patterns</p>
+        </header>
+        
+        <main class="main-content">
+            <div class="controls-panel">
+                <div class="control-group">
+                    <label for="data-select" class="control-label">Select Data View:</label>
+                    <select id="data-select" class="control-select">
+                        <option value="all">All Channels</option>
+                        <option value="filtered">Filtered View</option>
+                    </select>
+                </div>
+                <button id="load-btn" class="load-button">Load EEG Data</button>
+            </div>
+            
+            <div class="visualization-area">
+                <div class="chart-container">
+                    <canvas id="eeg-chart" class="chart-canvas"></canvas>
+                </div>
+                <div class="data-info">
+                    <div class="info-card">
+                        <h3 class="info-title">Data Summary</h3>
+                        <div id="data-summary" class="summary-content">
+                            No data loaded
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="main.js"></script>
+</body>
+</html>
