@@ -366,7 +366,7 @@ class InteractiveBrainVisualizer {
         this.addCerebellarFolia(brainGroup);
     }
 
-    addCerebellarFolia(cerebellum) {
+    addCerebellarFolia(brainGroup) {
         // Add characteristic cerebellar folding pattern
         const foliaGeometry = new THREE.CylinderGeometry(0.01, 0.01, 0.6, 6);
         const foliaMaterial = new THREE.MeshPhongMaterial({
@@ -384,7 +384,7 @@ class InteractiveBrainVisualizer {
                 Math.sin(angle) * 0.3 - 0.8
             );
             folia.rotation.y = angle;
-            this.brain.add(folia);
+            brainGroup.add(folia);
         }
     }
 
