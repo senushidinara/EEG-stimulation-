@@ -3,37 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Brain Activation Visualization</title>
+    <title>Interactive Brain Activation Visualization</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="app-container">
         <header class="header">
-            <h1 class="title">EEG Brain Activation Visualization</h1>
-            <p class="subtitle">Interactive analysis of brainwave patterns</p>
+            <h1 class="title">3D Interactive Brain Activation</h1>
+            <p class="subtitle">Real-time EEG visualization with 3D brain models</p>
         </header>
         
         <main class="main-content">
             <div class="controls-panel">
                 <div class="control-group">
-                    <label for="data-select" class="control-label">Select Data View:</label>
-                    <select id="data-select" class="control-select">
-                        <option value="all">All Channels</option>
-                        <option value="filtered">Filtered View</option>
+                    <label for="view-mode" class="control-label">View Mode:</label>
+                    <select id="view-mode" class="control-select">
+                        <option value="3d-brain">3D Brain Model</option>
+                        <option value="2d-chart">2D Time Series</option>
+                        <option value="split">Split View</option>
                     </select>
                 </div>
-                <button id="load-btn" class="load-button">Load EEG Data</button>
+                
+                <div class="control-group">
+                    <label for="data-select" class="control-label">Data View:</label>
+                    <select id="data-select" class="control-select">
+                        <option value="all">All Channels</option>
+                        <option value="frontal">Frontal Lobe</option>
+                        <option value="parietal">Parietal Lobe</option>
+                        <option value="temporal">Temporal Lobe</option>
+                        <option value="occipital">Occipital Lobe</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <label for="time-slider" class="control-label">Time:</label>
+                    <input type="range" id="time-slider" class="time-slider" min="0" max="100" value="0">
+                    <span id="time-display" class="time-display">0ms</span>
+                </div>
+                
+                <div class="button-group">
+                    <button id="load-btn" class="action-button primary">Load EEG Data</button>
+                    <button id="play-btn" class="action-button secondary" disabled>▶ Play</button>
+                    <button id="reset-btn" class="action-button secondary">Reset View</button>
+                </div>
             </div>
             
-            <div class="visualization-area">
-                <div class="chart-container">
+            <div class="visualization-container">
+                <div class="brain-3d-container" id="brain-3d-container">
+                    <div id="brain-3d" class="brain-3d-scene"></div>
+                    <div class="brain-overlay">
+                        <div class="electrode-info" id="electrode-info">
+                            <h4>Electrode Info</h4>
+                            <div id="electrode-details">Hover over electrodes for details</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="chart-container" id="chart-container">
                     <canvas id="eeg-chart" class="chart-canvas"></canvas>
                 </div>
-                <div class="data-info">
+                
+                <div class="side-panel">
+                    <div class="info-card">
+                        <h3 class="info-title">Brain Activity</h3>
+                        <div class="activity-meters">
+                            <div class="meter-item">
+                                <label>Alpha Waves</label>
+                                <div class="meter-bar">
+                                    <div class="meter-fill alpha" id="alpha-meter"></div>
+                                </div>
+                            </div>
+                            <div class="meter-item">
+                                <label>Beta Waves</label>
+                                <div class="meter-bar">
+                                    <div class="meter-fill beta" id="beta-meter"></div>
+                                </div>
+                            </div>
+                            <div class="meter-item">
+                                <label>Theta Waves</label>
+                                <div class="meter-bar">
+                                    <div class="meter-fill theta" id="theta-meter"></div>
+                                </div>
+                            </div>
+                            <div class="meter-item">
+                                <label>Delta Waves</label>
+                                <div class="meter-bar">
+                                    <div class="meter-fill delta" id="delta-meter"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="info-card">
                         <h3 class="info-title">Data Summary</h3>
                         <div id="data-summary" class="summary-content">
                             No data loaded
+                        </div>
+                    </div>
+                    
+                    <div class="info-card">
+                        <h3 class="info-title">Electrode Map</h3>
+                        <div id="electrode-map" class="electrode-grid">
+                            <!-- EEG electrode positions will be populated here -->
                         </div>
                     </div>
                 </div>
@@ -41,6 +112,6 @@
         </main>
     </div>
     
-    <script src="main.js"></script>
+    <script type="module" src="main.js"></script>
 </body>
 </html>
