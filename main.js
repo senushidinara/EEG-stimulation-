@@ -157,22 +157,169 @@ class InteractiveBrainVisualizer {
         this.addAnatomicalRegions(brainGroup);
     }
 
-    addBrainSurfaceDetails(brainGroup) {
-        // Add some surface texture to make it look more realistic
-        const detailGeometry = new THREE.SphereGeometry(0.05, 8, 8);
-        const detailMaterial = new THREE.MeshPhongMaterial({ 
-            color: 0xff8888,
+    createRealisticHemispheres(brainGroup) {
+        // Create left hemisphere with realistic shape
+        const leftGeometry = this.createBrainGeometry();
+        const brainMaterial = new THREE.MeshPhongMaterial({
+            color: 0xd4a574, // Realistic brain color
+            transparent: false,
+            shininess: 10,
+            bumpScale: 0.1
+        });
+
+        const leftHemisphere = new THREE.Mesh(leftGeometry, brainMaterial);
+        leftHemisphere.scale.set(-1, 1, 1); // Flip for left side
+        leftHemisphere.position.set(-0.05, 0, 0);
+        brainGroup.add(leftHemisphere);
+
+        // Create right hemisphere
+        const rightHemisphere = new THREE.Mesh(leftGeometry, brainMaterial.clone());
+        rightHemisphere.position.set(0.05, 0, 0);
+        brainGroup.add(rightHemisphere);
+
+        // Store hemispheres for later reference
+        this.leftHemisphere = leftHemisphere;
+        this.rightHemisphere = rightHemisphere;
+    }
+
+    createBrainGeometry() {
+        // Create realistic brain shape using parametric geometry
+        const brainGeometry = new THREE.SphereGeometry(1, 64, 32);
+        const positions = brainGeometry.attributes.position;
+
+        // Deform sphere to brain-like shape
+        for (let i = 0; i < positions.count; i++) {
+            const x = positions.getX(i);
+            const y = positions.getY(i);
+            const z = positions.getZ(i);
+
+            // Create brain-like deformations
+            const angle = Math.atan2(z, x);
+            const elevation = Math.asin(y);
+
+            // Front lobe protrusion
+            let frontFactor = 1.0;
+            if (z > 0.3) {
+                frontFactor = 1.2 - 0.3 * Math.abs(y);
+            }
+
+            // Temporal lobe bulge
+            let temporalFactor = 1.0;
+            if (Math.abs(x) > 0.6 && y < 0.2 && y > -0.8) {
+                temporalFactor = 1.3;
+            }
+
+            // Occipital narrowing
+            let occipitalFactor = 1.0;
+            if (z < -0.3) {
+                occipitalFactor = 0.8 + 0.2 * Math.abs(y);
+            }
+
+            // Flatten top slightly
+            let topFactor = 1.0;
+            if (y > 0.7) {
+                topFactor = 0.9;
+            }
+
+            // Apply deformations
+            const deformFactor = frontFactor * temporalFactor * occipitalFactor * topFactor;
+
+            positions.setXYZ(i,
+                x * deformFactor * 0.9,
+                y * deformFactor * 1.1,
+                z * deformFactor * 1.2
+            );
+        }
+
+        brainGeometry.attributes.position.needsUpdate = true;
+        brainGeometry.computeVertexNormals();
+
+        return brainGeometry;
+    }
+
+    addCorticalSurface(brainGroup) {
+        // Add gyri (ridges) and sulci (grooves) details
+        const corticalMaterial = new THREE.MeshPhongMaterial({
+            color: 0xc4956a,
+            transparent: true,
+            opacity: 0.8,
+            shininess: 5
+        });
+
+        // Create major sulci (grooves)
+        this.createCentralSulcus(brainGroup, corticalMaterial);
+        this.createSylvianFissure(brainGroup, corticalMaterial);
+        this.createLongitudinalFissure(brainGroup, corticalMaterial);
+
+        // Add surface texture for gyri
+        this.addGyriTexture(brainGroup);
+    }
+
+    createCentralSulcus(brainGroup, material) {
+        // Central sulcus - divides frontal from parietal lobe
+        const sulcusGeometry = new THREE.CylinderGeometry(0.02, 0.02, 1.2, 8);
+        const centralSulcus = new THREE.Mesh(sulcusGeometry, material.clone());
+        centralSulcus.material.color.setHex(0x8b6f4a); // Darker for groove
+        centralSulcus.rotation.z = Math.PI / 6;
+        centralSulcus.position.set(0, 0.2, 0.1);
+        brainGroup.add(centralSulcus);
+    }
+
+    createSylvianFissure(brainGroup, material) {
+        // Sylvian fissure - separates temporal from frontal/parietal
+        const fissureGeometry = new THREE.CylinderGeometry(0.03, 0.01, 1.0, 8);
+
+        // Left sylvian fissure
+        const leftFissure = new THREE.Mesh(fissureGeometry, material.clone());
+        leftFissure.material.color.setHex(0x8b6f4a);
+        leftFissure.rotation.z = -Math.PI / 4;
+        leftFissure.position.set(-0.6, -0.1, 0.3);
+        brainGroup.add(leftFissure);
+
+        // Right sylvian fissure
+        const rightFissure = new THREE.Mesh(fissureGeometry, material.clone());
+        rightFissure.material.color.setHex(0x8b6f4a);
+        rightFissure.rotation.z = Math.PI / 4;
+        rightFissure.position.set(0.6, -0.1, 0.3);
+        brainGroup.add(rightFissure);
+    }
+
+    createLongitudinalFissure(brainGroup, material) {
+        // Longitudinal fissure - separates left and right hemispheres
+        const fissureGeometry = new THREE.PlaneGeometry(0.05, 2.4);
+        const longitudinalFissure = new THREE.Mesh(fissureGeometry, material.clone());
+        longitudinalFissure.material.color.setHex(0x5a4a3a);
+        longitudinalFissure.material.transparent = true;
+        longitudinalFissure.material.opacity = 0.7;
+        longitudinalFissure.position.set(0, 0, 0);
+        brainGroup.add(longitudinalFissure);
+    }
+
+    addGyriTexture(brainGroup) {
+        // Add small ridges to simulate gyri (brain folds)
+        const gyriMaterial = new THREE.MeshPhongMaterial({
+            color: 0xe4b584,
             transparent: true,
             opacity: 0.6
         });
-        
-        for (let i = 0; i < 20; i++) {
-            const detail = new THREE.Mesh(detailGeometry, detailMaterial);
-            const phi = Math.acos(-1 + (2 * i) / 20);
-            const theta = Math.sqrt(20 * Math.PI) * phi;
-            
-            detail.position.setFromSphericalCoords(1.1, phi, theta);
-            brainGroup.add(detail);
+
+        for (let i = 0; i < 40; i++) {
+            const gyrusGeometry = new THREE.CylinderGeometry(0.015, 0.015, Math.random() * 0.8 + 0.4, 6);
+            const gyrus = new THREE.Mesh(gyrusGeometry, gyriMaterial);
+
+            // Random position on brain surface
+            const phi = Math.random() * Math.PI * 2;
+            const theta = Math.random() * Math.PI;
+            const radius = 1.05;
+
+            gyrus.position.setFromSphericalCoords(radius, theta, phi);
+            gyrus.lookAt(0, 0, 0);
+            gyrus.rotateX(Math.PI / 2);
+
+            // Random rotation for natural look
+            gyrus.rotation.z = Math.random() * Math.PI;
+
+            brainGroup.add(gyrus);
         }
     }
 
