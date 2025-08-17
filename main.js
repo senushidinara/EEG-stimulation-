@@ -713,6 +713,45 @@ class InteractiveBrainVisualizer {
         this.updateActivityMeters();
     }
 
+    updateBrainRegionActivity(electrodeName, intensity) {
+        // Map electrodes to brain regions for realistic activation
+        const regionMapping = {
+            'Fp1': 'Frontal Cortex', 'Fp2': 'Frontal Cortex',
+            'F1': 'Frontal Cortex', 'F2': 'Frontal Cortex',
+            'F3': 'Frontal Cortex', 'F4': 'Frontal Cortex',
+            'F7': 'Broca\'s Area', 'F8': 'Frontal Cortex',
+            'Fz': 'Motor Cortex',
+            'C1': 'Motor Cortex', 'C2': 'Motor Cortex',
+            'C3': 'Somatosensory', 'C4': 'Somatosensory',
+            'Cz': 'Motor Cortex',
+            'P1': 'Parietal Cortex', 'P2': 'Parietal Cortex',
+            'P3': 'Parietal Cortex', 'P4': 'Parietal Cortex',
+            'Pz': 'Parietal Cortex',
+            'T3': 'Temporal Cortex', 'T4': 'Temporal Cortex',
+            'T5': 'Wernicke\'s Area', 'T6': 'Temporal Cortex',
+            'O1': 'Occipital Cortex', 'O2': 'Occipital Cortex'
+        };
+
+        const regionName = regionMapping[electrodeName];
+        if (regionName && this.brain) {
+            // Find the brain region mesh and update its activity
+            this.brain.children.forEach(child => {
+                if (child.userData && child.userData.name === regionName) {
+                    child.userData.activity = intensity;
+
+                    // Update region color based on activity
+                    if (intensity > 0.6) {
+                        child.material.emissiveIntensity = 0.3;
+                    } else if (intensity > 0.3) {
+                        child.material.emissiveIntensity = 0.2;
+                    } else {
+                        child.material.emissiveIntensity = 0.1;
+                    }
+                }
+            });
+        }
+    }
+
     updateActivityMeters() {
         if (!this.data) return;
         
