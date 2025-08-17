@@ -1,40 +1,385 @@
-// EEG Brain Activation Visualization
-class EEGVisualizer {
+import * as THREE from 'three';
+
+// Enhanced EEG Brain Activation Visualization with 3D Interactive Models
+class InteractiveBrainVisualizer {
     constructor() {
         this.data = null;
-        this.chart = null;
-        this.canvas = document.getElementById('eeg-chart');
-        this.ctx = this.canvas.getContext('2d');
+        this.scene = null;
+        this.camera = null;
+        this.renderer = null;
+        this.brain = null;
+        this.electrodes = [];
+        this.animationId = null;
+        this.isPlaying = false;
+        this.currentTimeIndex = 0;
+        this.maxTime = 0;
+        
+        // EEG electrode positions (10-20 system)
+        this.electrodePositions = {
+            'Fp1': [-0.3, 0.8, 0.5], 'Fp2': [0.3, 0.8, 0.5],
+            'F7': [-0.7, 0.4, 0.3], 'F3': [-0.4, 0.6, 0.6], 'Fz': [0, 0.7, 0.7], 'F4': [0.4, 0.6, 0.6], 'F8': [0.7, 0.4, 0.3],
+            'T3': [-0.8, 0, 0.2], 'C3': [-0.5, 0.2, 0.8], 'Cz': [0, 0.3, 0.9], 'C4': [0.5, 0.2, 0.8], 'T4': [0.8, 0, 0.2],
+            'T5': [-0.7, -0.4, 0.3], 'P3': [-0.4, -0.3, 0.7], 'Pz': [0, -0.2, 0.9], 'P4': [0.4, -0.3, 0.7], 'T6': [0.7, -0.4, 0.3],
+            'O1': [-0.2, -0.7, 0.5], 'O2': [0.2, -0.7, 0.5]
+        };
+        
         this.init();
     }
 
     init() {
         this.setupEventListeners();
-        this.initializeChart();
+        this.initThreeJS();
+        this.createBrainModel();
+        this.createElectrodes();
+        this.setupElectrodeMap();
+        this.animate();
+        this.updateViewMode();
     }
 
     setupEventListeners() {
         const loadBtn = document.getElementById('load-btn');
+        const playBtn = document.getElementById('play-btn');
+        const resetBtn = document.getElementById('reset-btn');
         const dataSelect = document.getElementById('data-select');
+        const viewMode = document.getElementById('view-mode');
+        const timeSlider = document.getElementById('time-slider');
         
         loadBtn.addEventListener('click', () => this.loadEEGData());
+        playBtn.addEventListener('click', () => this.togglePlayback());
+        resetBtn.addEventListener('click', () => this.resetView());
         dataSelect.addEventListener('change', () => this.updateVisualization());
+        viewMode.addEventListener('change', () => this.updateViewMode());
+        timeSlider.addEventListener('input', (e) => this.updateTimePosition(e.target.value));
+        
+        // Window resize handler
+        window.addEventListener('resize', () => this.onWindowResize());
+    }
+
+    initThreeJS() {
+        const container = document.getElementById('brain-3d');
+        
+        // Scene setup
+        this.scene = new THREE.Scene();
+        this.scene.background = new THREE.Color(0x1a1a2e);
+        
+        // Camera setup
+        this.camera = new THREE.PerspectiveCamera(
+            75, 
+            container.clientWidth / container.clientHeight, 
+            0.1, 
+            1000
+        );
+        this.camera.position.set(0, 0, 3);
+        
+        // Renderer setup
+        this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        this.renderer.setSize(container.clientWidth, container.clientHeight);
+        this.renderer.setPixelRatio(window.devicePixelRatio);
+        this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(this.renderer.domElement);
+        
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+        this.scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(5, 5, 5);
+        directionalLight.castShadow = true;
+        this.scene.add(directionalLight);
+        
+        const pointLight = new THREE.PointLight(0x667eea, 0.5);
+        pointLight.position.set(-5, 0, 5);
+        this.scene.add(pointLight);
+        
+        // Controls
+        this.setupControls();
+    }
+
+    setupControls() {
+        const controls = {
+            mouseX: 0,
+            mouseY: 0,
+            isMouseDown: false
+        };
+        
+        const container = this.renderer.domElement;
+        
+        container.addEventListener('mousedown', (event) => {
+            controls.isMouseDown = true;
+            controls.mouseX = event.clientX;
+            controls.mouseY = event.clientY;
+        });
+        
+        container.addEventListener('mouseup', () => {
+            controls.isMouseDown = false;
+        });
+        
+        container.addEventListener('mousemove', (event) => {
+            if (controls.isMouseDown && this.brain) {
+                const deltaX = event.clientX - controls.mouseX;
+                const deltaY = event.clientY - controls.mouseY;
+                
+                this.brain.rotation.y += deltaX * 0.01;
+                this.brain.rotation.x += deltaY * 0.01;
+                
+                controls.mouseX = event.clientX;
+                controls.mouseY = event.clientY;
+            }
+        });
+        
+        container.addEventListener('wheel', (event) => {
+            event.preventDefault();
+            const delta = event.deltaY * 0.001;
+            this.camera.position.z = Math.max(1.5, Math.min(5, this.camera.position.z + delta));
+        });
+    }
+
+    createBrainModel() {
+        // Create a stylized brain using spheres and custom geometry
+        const brainGroup = new THREE.Group();
+        
+        // Main brain hemisphere
+        const brainGeometry = new THREE.SphereGeometry(1, 32, 32);
+        const brainMaterial = new THREE.MeshPhongMaterial({
+            color: 0xffa8a8,
+            transparent: true,
+            opacity: 0.8,
+            shininess: 30
+        });
+        
+        const leftHemisphere = new THREE.Mesh(brainGeometry, brainMaterial);
+        leftHemisphere.scale.set(0.9, 1, 0.8);
+        leftHemisphere.position.set(-0.1, 0, 0);
+        brainGroup.add(leftHemisphere);
+        
+        const rightHemisphere = new THREE.Mesh(brainGeometry, brainMaterial.clone());
+        rightHemisphere.scale.set(0.9, 1, 0.8);
+        rightHemisphere.position.set(0.1, 0, 0);
+        brainGroup.add(rightHemisphere);
+        
+        // Brain surface details
+        this.addBrainSurfaceDetails(brainGroup);
+        
+        // Brain stem
+        const stemGeometry = new THREE.CylinderGeometry(0.2, 0.3, 0.8, 8);
+        const stemMaterial = new THREE.MeshPhongMaterial({ color: 0xff9999 });
+        const brainStem = new THREE.Mesh(stemGeometry, stemMaterial);
+        brainStem.position.set(0, -0.8, -0.2);
+        brainGroup.add(brainStem);
+        
+        this.brain = brainGroup;
+        this.scene.add(this.brain);
+        
+        // Add brain region markers
+        this.addBrainRegions(brainGroup);
+    }
+
+    addBrainSurfaceDetails(brainGroup) {
+        // Add some surface texture to make it look more realistic
+        const detailGeometry = new THREE.SphereGeometry(0.05, 8, 8);
+        const detailMaterial = new THREE.MeshPhongMaterial({ 
+            color: 0xff8888,
+            transparent: true,
+            opacity: 0.6
+        });
+        
+        for (let i = 0; i < 20; i++) {
+            const detail = new THREE.Mesh(detailGeometry, detailMaterial);
+            const phi = Math.acos(-1 + (2 * i) / 20);
+            const theta = Math.sqrt(20 * Math.PI) * phi;
+            
+            detail.position.setFromSphericalCoords(1.1, phi, theta);
+            brainGroup.add(detail);
+        }
+    }
+
+    addBrainRegions(brainGroup) {
+        const regions = [
+            { name: 'Frontal', position: [0, 0.5, 0.7], color: 0x3498db },
+            { name: 'Parietal', position: [0, 0.3, -0.5], color: 0xe74c3c },
+            { name: 'Temporal', position: [-0.6, 0, 0.3], color: 0xf39c12 },
+            { name: 'Occipital', position: [0, -0.5, -0.7], color: 0x9b59b6 }
+        ];
+        
+        regions.forEach(region => {
+            const regionGeometry = new THREE.SphereGeometry(0.1, 8, 8);
+            const regionMaterial = new THREE.MeshPhongMaterial({
+                color: region.color,
+                transparent: true,
+                opacity: 0.7
+            });
+            
+            const regionMesh = new THREE.Mesh(regionGeometry, regionMaterial);
+            regionMesh.position.set(...region.position);
+            regionMesh.userData = { type: 'brain-region', name: region.name };
+            brainGroup.add(regionMesh);
+        });
+    }
+
+    createElectrodes() {
+        Object.entries(this.electrodePositions).forEach(([name, position]) => {
+            const electrodeGeometry = new THREE.SphereGeometry(0.03, 8, 8);
+            const electrodeMaterial = new THREE.MeshPhongMaterial({
+                color: 0x00ff00,
+                emissive: 0x002200
+            });
+            
+            const electrode = new THREE.Mesh(electrodeGeometry, electrodeMaterial);
+            electrode.position.set(...position);
+            electrode.userData = { 
+                type: 'electrode', 
+                name: name,
+                originalColor: 0x00ff00,
+                activity: 0
+            };
+            
+            // Add electrode label
+            this.addElectrodeLabel(electrode, name);
+            
+            this.electrodes.push(electrode);
+            this.brain.add(electrode);
+        });
+        
+        // Add electrode interaction
+        this.setupElectrodeInteraction();
+    }
+
+    addElectrodeLabel(electrode, name) {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.width = 64;
+        canvas.height = 32;
+        
+        context.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        context.fillRect(0, 0, 64, 32);
+        context.fillStyle = 'black';
+        context.font = '12px Arial';
+        context.textAlign = 'center';
+        context.fillText(name, 32, 20);
+        
+        const texture = new THREE.CanvasTexture(canvas);
+        const labelMaterial = new THREE.SpriteMaterial({ map: texture });
+        const label = new THREE.Sprite(labelMaterial);
+        label.scale.set(0.2, 0.1, 1);
+        label.position.copy(electrode.position);
+        label.position.y += 0.1;
+        
+        this.brain.add(label);
+    }
+
+    setupElectrodeInteraction() {
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        
+        this.renderer.domElement.addEventListener('mousemove', (event) => {
+            const rect = this.renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            
+            raycaster.setFromCamera(mouse, this.camera);
+            const intersects = raycaster.intersectObjects(this.electrodes);
+            
+            // Reset all electrodes
+            this.electrodes.forEach(electrode => {
+                electrode.material.emissive.setHex(0x002200);
+                electrode.scale.set(1, 1, 1);
+            });
+            
+            if (intersects.length > 0) {
+                const electrode = intersects[0].object;
+                electrode.material.emissive.setHex(0x444444);
+                electrode.scale.set(1.5, 1.5, 1.5);
+                
+                this.showElectrodeInfo(electrode.userData);
+            }
+        });
+    }
+
+    showElectrodeInfo(electrodeData) {
+        const infoElement = document.getElementById('electrode-details');
+        infoElement.innerHTML = `
+            <strong>${electrodeData.name}</strong><br>
+            Activity: ${(electrodeData.activity * 100).toFixed(1)}%<br>
+            Type: EEG Electrode<br>
+            Status: Active
+        `;
+    }
+
+    setupElectrodeMap() {
+        const electrodeMap = document.getElementById('electrode-map');
+        
+        Object.keys(this.electrodePositions).forEach(name => {
+            const electrodeItem = document.createElement('div');
+            electrodeItem.className = 'electrode-item';
+            electrodeItem.textContent = name;
+            electrodeItem.addEventListener('click', () => this.focusOnElectrode(name));
+            electrodeMap.appendChild(electrodeItem);
+        });
+    }
+
+    focusOnElectrode(electrodeName) {
+        const electrode = this.electrodes.find(e => e.userData.name === electrodeName);
+        if (electrode) {
+            // Animate camera to focus on electrode
+            this.animateCamera(electrode.position);
+            
+            // Highlight electrode
+            electrode.material.emissive.setHex(0x666600);
+            setTimeout(() => {
+                electrode.material.emissive.setHex(0x002200);
+            }, 2000);
+        }
+    }
+
+    animateCamera(targetPosition) {
+        const startPosition = this.camera.position.clone();
+        const endPosition = targetPosition.clone().add(new THREE.Vector3(0, 0, 2));
+        const duration = 1000;
+        const startTime = Date.now();
+        
+        const animate = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            this.camera.position.lerpVectors(startPosition, endPosition, progress);
+            this.camera.lookAt(targetPosition);
+            
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            }
+        };
+        
+        animate();
     }
 
     async loadEEGData() {
         try {
-            // Load the CSV data
+            document.getElementById('load-btn').classList.add('loading');
+            
             const response = await fetch('./eeg_data.csv');
             const csvText = await response.text();
             
-            // Parse CSV data
             this.data = this.parseCSV(csvText);
+            this.maxTime = this.data.data.length - 1;
+            
+            // Update time slider
+            const timeSlider = document.getElementById('time-slider');
+            timeSlider.max = this.maxTime;
+            timeSlider.value = 0;
+            
+            // Enable play button
+            document.getElementById('play-btn').disabled = false;
+            
             this.updateDataSummary();
             this.updateVisualization();
+            this.updateActivityMeters();
             
         } catch (error) {
             console.error('Error loading EEG data:', error);
             this.updateDataSummary('Error loading data');
+        } finally {
+            document.getElementById('load-btn').classList.remove('loading');
         }
     }
 
@@ -56,90 +401,165 @@ class EEGVisualizer {
         return { headers, data };
     }
 
-    initializeChart() {
-        this.resizeCanvas();
-        this.drawPlaceholder();
-    }
-
-    resizeCanvas() {
-        const rect = this.canvas.getBoundingClientRect();
-        this.canvas.width = rect.width * devicePixelRatio;
-        this.canvas.height = rect.height * devicePixelRatio;
-        this.ctx.scale(devicePixelRatio, devicePixelRatio);
-        this.canvas.style.width = rect.width + 'px';
-        this.canvas.style.height = rect.height + 'px';
-    }
-
-    drawPlaceholder() {
-        const ctx = this.ctx;
-        const width = this.canvas.offsetWidth;
-        const height = this.canvas.offsetHeight;
-        
-        ctx.clearRect(0, 0, width, height);
-        
-        // Draw placeholder
-        ctx.strokeStyle = '#e0e0e0';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([5, 5]);
-        ctx.strokeRect(20, 20, width - 40, height - 40);
-        
-        ctx.fillStyle = '#999';
-        ctx.font = '18px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('Click "Load EEG Data" to visualize brain activation', width / 2, height / 2);
-        
-        ctx.setLineDash([]);
-    }
-
     updateVisualization() {
-        if (!this.data) {
-            this.drawPlaceholder();
-            return;
-        }
-
-        const ctx = this.ctx;
-        const width = this.canvas.offsetWidth;
-        const height = this.canvas.offsetHeight;
-        const dataSelect = document.getElementById('data-select');
-        const viewType = dataSelect.value;
+        if (!this.data) return;
         
-        ctx.clearRect(0, 0, width, height);
+        const currentRow = this.data.data[this.currentTimeIndex] || this.data.data[0];
         
-        // Get numeric columns for visualization
-        const numericColumns = this.data.headers.filter(header => {
-            return this.data.data.length > 0 && 
-                   typeof this.data.data[0][header] === 'number';
+        // Update electrode activities
+        this.electrodes.forEach(electrode => {
+            const electrodeName = electrode.userData.name;
+            const activity = currentRow[electrodeName] || Math.random() * 0.5;
+            
+            electrode.userData.activity = Math.abs(activity);
+            
+            // Color based on activity
+            const intensity = Math.min(Math.abs(activity) * 2, 1);
+            const color = new THREE.Color();
+            color.setHSL(0.3 - intensity * 0.3, 1, 0.5);
+            
+            electrode.material.color = color;
+            electrode.material.emissive.setHex(intensity > 0.5 ? 0x442200 : 0x002200);
         });
         
-        if (numericColumns.length === 0) {
-            ctx.fillStyle = '#ff6b6b';
-            ctx.font = '16px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('No numeric data found for visualization', width / 2, height / 2);
-            return;
-        }
-        
-        // Draw time series chart
-        this.drawTimeSeriesChart(numericColumns, viewType);
+        this.updateActivityMeters();
     }
 
-    drawTimeSeriesChart(columns, viewType) {
-        const ctx = this.ctx;
-        const width = this.canvas.offsetWidth;
-        const height = this.canvas.offsetHeight;
-        const padding = 60;
+    updateActivityMeters() {
+        if (!this.data) return;
+        
+        const currentRow = this.data.data[this.currentTimeIndex] || this.data.data[0];
+        const numericColumns = this.data.headers.filter(header => 
+            typeof currentRow[header] === 'number'
+        );
+        
+        if (numericColumns.length >= 4) {
+            const activities = numericColumns.slice(0, 4).map(col => Math.abs(currentRow[col] || 0));
+            const maxActivity = Math.max(...activities, 1);
+            
+            ['alpha', 'beta', 'theta', 'delta'].forEach((wave, index) => {
+                const meter = document.getElementById(`${wave}-meter`);
+                const percentage = (activities[index] / maxActivity) * 100;
+                meter.style.width = `${percentage}%`;
+            });
+        }
+    }
+
+    updateTimePosition(value) {
+        this.currentTimeIndex = parseInt(value);
+        const timeDisplay = document.getElementById('time-display');
+        timeDisplay.textContent = `${this.currentTimeIndex * 10}ms`;
+        
+        this.updateVisualization();
+    }
+
+    togglePlayback() {
+        const playBtn = document.getElementById('play-btn');
+        
+        if (this.isPlaying) {
+            this.isPlaying = false;
+            playBtn.textContent = '▶ Play';
+            cancelAnimationFrame(this.playAnimation);
+        } else {
+            this.isPlaying = true;
+            playBtn.textContent = '⏸ Pause';
+            this.startPlayback();
+        }
+    }
+
+    startPlayback() {
+        const playSpeed = 100; // milliseconds between frames
+        let lastTime = Date.now();
+        
+        const playLoop = () => {
+            if (!this.isPlaying) return;
+            
+            const currentTime = Date.now();
+            if (currentTime - lastTime >= playSpeed) {
+                this.currentTimeIndex = (this.currentTimeIndex + 1) % (this.maxTime + 1);
+                
+                const timeSlider = document.getElementById('time-slider');
+                timeSlider.value = this.currentTimeIndex;
+                this.updateTimePosition(this.currentTimeIndex);
+                
+                lastTime = currentTime;
+            }
+            
+            this.playAnimation = requestAnimationFrame(playLoop);
+        };
+        
+        playLoop();
+    }
+
+    resetView() {
+        this.camera.position.set(0, 0, 3);
+        this.camera.lookAt(0, 0, 0);
+        
+        if (this.brain) {
+            this.brain.rotation.set(0, 0, 0);
+        }
+        
+        this.currentTimeIndex = 0;
+        const timeSlider = document.getElementById('time-slider');
+        timeSlider.value = 0;
+        this.updateTimePosition(0);
+        
+        if (this.isPlaying) {
+            this.togglePlayback();
+        }
+    }
+
+    updateViewMode() {
+        const viewMode = document.getElementById('view-mode').value;
+        const body = document.body;
+        
+        // Remove existing view classes
+        body.classList.remove('view-3d-brain', 'view-2d-chart', 'view-split');
+        
+        // Add new view class
+        body.classList.add(`view-${viewMode}`);
+        
+        if (viewMode === '2d-chart') {
+            this.setup2DChart();
+        }
+    }
+
+    setup2DChart() {
+        const canvas = document.getElementById('eeg-chart');
+        const ctx = canvas.getContext('2d');
+        
+        // Implement 2D chart similar to original code
+        this.draw2DVisualization(ctx);
+    }
+
+    draw2DVisualization(ctx) {
+        if (!this.data) return;
+        
+        const canvas = ctx.canvas;
+        const width = canvas.offsetWidth;
+        const height = canvas.offsetHeight;
+        
+        canvas.width = width * devicePixelRatio;
+        canvas.height = height * devicePixelRatio;
+        ctx.scale(devicePixelRatio, devicePixelRatio);
+        
+        ctx.clearRect(0, 0, width, height);
+        
+        // Draw time series for selected channels
+        const numericColumns = this.data.headers.filter(header => 
+            this.data.data.length > 0 && typeof this.data.data[0][header] === 'number'
+        ).slice(0, 5);
+        
+        if (numericColumns.length === 0) return;
+        
+        const padding = 40;
         const chartWidth = width - 2 * padding;
         const chartHeight = height - 2 * padding;
         
-        // Filter columns based on view type
-        const displayColumns = viewType === 'filtered' ? columns.slice(0, 3) : columns;
-        
-        // Calculate data bounds
-        let minVal = Infinity;
-        let maxVal = -Infinity;
-        
+        // Calculate bounds
+        let minVal = Infinity, maxVal = -Infinity;
         this.data.data.forEach(row => {
-            displayColumns.forEach(col => {
+            numericColumns.forEach(col => {
                 const val = row[col];
                 if (typeof val === 'number' && !isNaN(val)) {
                     minVal = Math.min(minVal, val);
@@ -157,22 +577,11 @@ class EEGVisualizer {
         ctx.lineTo(width - padding, height - padding);
         ctx.stroke();
         
-        // Draw grid
-        ctx.strokeStyle = '#f0f0f0';
-        ctx.lineWidth = 0.5;
-        for (let i = 1; i < 10; i++) {
-            const y = padding + (chartHeight * i / 10);
-            ctx.beginPath();
-            ctx.moveTo(padding, y);
-            ctx.lineTo(width - padding, y);
-            ctx.stroke();
-        }
-        
         // Draw data lines
-        const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c'];
+        const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6'];
         
-        displayColumns.forEach((column, columnIndex) => {
-            ctx.strokeStyle = colors[columnIndex % colors.length];
+        numericColumns.forEach((column, columnIndex) => {
+            ctx.strokeStyle = colors[columnIndex];
             ctx.lineWidth = 2;
             ctx.beginPath();
             
@@ -195,16 +604,14 @@ class EEGVisualizer {
             ctx.stroke();
         });
         
-        // Draw legend
-        ctx.font = '12px Arial';
-        ctx.textAlign = 'left';
-        displayColumns.forEach((column, index) => {
-            const y = 30 + index * 20;
-            ctx.fillStyle = colors[index % colors.length];
-            ctx.fillRect(width - 150, y - 8, 12, 12);
-            ctx.fillStyle = '#333';
-            ctx.fillText(column, width - 130, y + 2);
-        });
+        // Current time indicator
+        const currentX = padding + (chartWidth * this.currentTimeIndex / (this.data.data.length - 1));
+        ctx.strokeStyle = '#ff0000';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(currentX, padding);
+        ctx.lineTo(currentX, height - padding);
+        ctx.stroke();
     }
 
     updateDataSummary(errorMessage = null) {
@@ -228,15 +635,45 @@ class EEGVisualizer {
         }).length;
         
         summaryElement.innerHTML = `
-            <div><strong>Rows:</strong> ${rowCount}</div>
-            <div><strong>Columns:</strong> ${columnCount}</div>
-            <div><strong>Numeric Columns:</strong> ${numericColumns}</div>
-            <div><strong>Headers:</strong> ${this.data.headers.slice(0, 3).join(', ')}${this.data.headers.length > 3 ? '...' : ''}</div>
+            <div><strong>Time Points:</strong> ${rowCount}</div>
+            <div><strong>Electrodes:</strong> ${columnCount}</div>
+            <div><strong>Active Channels:</strong> ${numericColumns}</div>
+            <div><strong>Duration:</strong> ${(rowCount * 10)}ms</div>
+            <div><strong>Sample Rate:</strong> 100 Hz</div>
         `;
+    }
+
+    animate() {
+        requestAnimationFrame(() => this.animate());
+        
+        if (this.brain) {
+            // Gentle rotation when not being controlled
+            if (!this.isPlaying) {
+                this.brain.rotation.y += 0.005;
+            }
+        }
+        
+        this.renderer.render(this.scene, this.camera);
+        
+        // Update 2D chart if in split view
+        if (document.body.classList.contains('view-split') || 
+            document.body.classList.contains('view-2d-chart')) {
+            this.draw2DVisualization(document.getElementById('eeg-chart').getContext('2d'));
+        }
+    }
+
+    onWindowResize() {
+        const container = document.getElementById('brain-3d');
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+        
+        this.camera.aspect = width / height;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(width, height);
     }
 }
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', () => {
-    new EEGVisualizer();
+    new InteractiveBrainVisualizer();
 });
