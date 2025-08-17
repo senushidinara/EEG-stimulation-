@@ -136,43 +136,25 @@ class InteractiveBrainVisualizer {
     }
 
     createBrainModel() {
-        // Create a stylized brain using spheres and custom geometry
+        // Create anatomically accurate brain model
         const brainGroup = new THREE.Group();
-        
-        // Main brain hemisphere
-        const brainGeometry = new THREE.SphereGeometry(1, 32, 32);
-        const brainMaterial = new THREE.MeshPhongMaterial({
-            color: 0xffa8a8,
-            transparent: true,
-            opacity: 0.8,
-            shininess: 30
-        });
-        
-        const leftHemisphere = new THREE.Mesh(brainGeometry, brainMaterial);
-        leftHemisphere.scale.set(0.9, 1, 0.8);
-        leftHemisphere.position.set(-0.1, 0, 0);
-        brainGroup.add(leftHemisphere);
-        
-        const rightHemisphere = new THREE.Mesh(brainGeometry, brainMaterial.clone());
-        rightHemisphere.scale.set(0.9, 1, 0.8);
-        rightHemisphere.position.set(0.1, 0, 0);
-        brainGroup.add(rightHemisphere);
-        
-        // Brain surface details
-        this.addBrainSurfaceDetails(brainGroup);
-        
-        // Brain stem
-        const stemGeometry = new THREE.CylinderGeometry(0.2, 0.3, 0.8, 8);
-        const stemMaterial = new THREE.MeshPhongMaterial({ color: 0xff9999 });
-        const brainStem = new THREE.Mesh(stemGeometry, stemMaterial);
-        brainStem.position.set(0, -0.8, -0.2);
-        brainGroup.add(brainStem);
-        
+
+        // Create realistic brain hemispheres with cortical folding
+        this.createRealisticHemispheres(brainGroup);
+
+        // Add anatomical structures
+        this.addCerebellum(brainGroup);
+        this.addBrainStem(brainGroup);
+        this.addCorpusCallosum(brainGroup);
+
+        // Add cortical surface details (gyri and sulci)
+        this.addCorticalSurface(brainGroup);
+
         this.brain = brainGroup;
         this.scene.add(this.brain);
-        
-        // Add brain region markers
-        this.addBrainRegions(brainGroup);
+
+        // Add anatomical brain regions
+        this.addAnatomicalRegions(brainGroup);
     }
 
     addBrainSurfaceDetails(brainGroup) {
