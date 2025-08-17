@@ -91,18 +91,32 @@ class InteractiveBrainVisualizer {
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         container.appendChild(this.renderer.domElement);
         
-        // Lighting
-        const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+        // Enhanced lighting for realistic brain visualization
+        const ambientLight = new THREE.AmbientLight(0x404050, 0.4);
         this.scene.add(ambientLight);
-        
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        directionalLight.position.set(5, 5, 5);
+
+        // Main directional light (key light)
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
+        directionalLight.position.set(5, 8, 5);
         directionalLight.castShadow = true;
+        directionalLight.shadow.mapSize.width = 2048;
+        directionalLight.shadow.mapSize.height = 2048;
         this.scene.add(directionalLight);
-        
-        const pointLight = new THREE.PointLight(0x667eea, 0.5);
-        pointLight.position.set(-5, 0, 5);
-        this.scene.add(pointLight);
+
+        // Fill light from the side
+        const fillLight = new THREE.DirectionalLight(0xaabbff, 0.4);
+        fillLight.position.set(-3, 3, 4);
+        this.scene.add(fillLight);
+
+        // Rim light for brain contour
+        const rimLight = new THREE.DirectionalLight(0xffddaa, 0.3);
+        rimLight.position.set(-5, -2, -5);
+        this.scene.add(rimLight);
+
+        // Subtle point light for electrode highlighting
+        const electrodeLight = new THREE.PointLight(0x66aaff, 0.3);
+        electrodeLight.position.set(0, 2, 2);
+        this.scene.add(electrodeLight);
         
         // Controls
         this.setupControls();
