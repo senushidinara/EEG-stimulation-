@@ -676,20 +676,38 @@ class InteractiveBrainVisualizer {
         
         const currentRow = this.data.data[this.currentTimeIndex] || this.data.data[0];
         
-        // Update electrode activities
+        // Update electrode activities with realistic brain activity visualization
         this.electrodes.forEach(electrode => {
             const electrodeName = electrode.userData.name;
             const activity = currentRow[electrodeName] || Math.random() * 0.5;
-            
+
             electrode.userData.activity = Math.abs(activity);
-            
-            // Color based on activity
+
+            // Color electrode contact based on activity
             const intensity = Math.min(Math.abs(activity) * 2, 1);
-            const color = new THREE.Color();
-            color.setHSL(0.3 - intensity * 0.3, 1, 0.5);
-            
-            electrode.material.color = color;
-            electrode.material.emissive.setHex(intensity > 0.5 ? 0x442200 : 0x002200);
+            const contact = electrode.userData.contact;
+
+            if (contact) {
+                // Use brain activity color scale (blue=low, red=high)
+                const color = new THREE.Color();
+                if (intensity < 0.3) {
+                    color.setHSL(0.67, 0.8, 0.5); // Blue for low activity
+                } else if (intensity < 0.7) {
+                    color.setHSL(0.17, 0.9, 0.6); // Yellow for medium activity
+                } else {
+                    color.setHSL(0.0, 0.9, 0.6); // Red for high activity
+                }
+
+                contact.material.color = color;
+                contact.material.emissive.setHex(intensity > 0.5 ? 0x221100 : 0x001122);
+
+                // Scale electrode slightly based on activity
+                const scale = 1.0 + intensity * 0.3;
+                contact.scale.setScalar(scale);
+            }
+
+            // Update corresponding brain region activity
+            this.updateBrainRegionActivity(electrodeName, intensity);
         });
         
         this.updateActivityMeters();
