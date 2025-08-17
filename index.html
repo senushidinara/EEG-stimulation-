@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced EEG Sleep Monitor - Real Data Analysis</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Welcome Header -->
+        <header class="welcome-header">
+            <div class="header-content">
+                <div class="user-greeting">
+                    <div class="profile-avatar" id="profile-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="greeting-text">
+                        <h1 id="user-greeting">Hi Guest 👋</h1>
+                        <p>Here's your sleep analysis</p>
+                    </div>
+                </div>
+                
+                <div class="session-info">
+                    <div class="info-card">
+                        <span class="info-label">Session</span>
+                        <span class="info-value" id="session-duration">8h 15m</span>
+                    </div>
+                    <div class="info-card">
+                        <span class="info-label">Quality</span>
+                        <span class="info-value sleep-quality">Excellent</span>
+                    </div>
+                    <div class="status-dot recording"></div>
+                </div>
+            </div>
+            
+            <!-- User Setup Modal - Hidden by default -->
+            <div class="user-setup-modal" id="user-setup-modal" style="display: none;">
+                <div class="modal-content">
+                    <h3>Welcome to EEG Sleep Monitor</h3>
+                    <p>Let's personalize your experience</p>
+                    <input type="text" id="user-name" placeholder="Enter your name" maxlength="20">
+                    <div class="avatar-selection">
+                        <span>Choose avatar:</span>
+                        <div class="avatar-options">
+                            <div class="avatar-option" data-avatar="user">👤</div>
+                            <div class="avatar-option" data-avatar="person">👨</div>
+                            <div class="avatar-option" data-avatar="woman">👩</div>
+                            <div class="avatar-option" data-avatar="doctor">👨‍⚕️</div>
+                            <div class="avatar-option" data-avatar="scientist">👨‍🔬</div>
+                        </div>
+                    </div>
+                    <button class="setup-btn" id="setup-complete">Start Analysis</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Dashboard -->
+        <main class="main-dashboard">
+            <!-- Left Panel - EEG Visualization -->
+            <div class="left-panel">
+                <div class="eeg-section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-brain"></i> Live EEG Analysis</h2>
+                        <div class="eeg-controls">
+                            <div class="band-toggles">
+                                <button class="band-toggle active" data-band="all">
+                                    <span class="band-color all-band"></span>
+                                    All Bands
+                                </button>
+                                <button class="band-toggle" data-band="delta">
+                                    <span class="band-color delta-band"></span>
+                                    Delta (0.5-4Hz)
+                                </button>
+                                <button class="band-toggle" data-band="theta">
+                                    <span class="band-color theta-band"></span>
+                                    Theta (4-8Hz)
+                                </button>
+                                <button class="band-toggle" data-band="alpha">
+                                    <span class="band-color alpha-band"></span>
+                                    Alpha (8-12Hz)
+                                </button>
+                                <button class="band-toggle" data-band="beta">
+                                    <span class="band-color beta-band"></span>
+                                    Beta (12-30Hz)
+                                </button>
+                                <button class="band-toggle" data-band="gamma">
+                                    <span class="band-color gamma-band"></span>
+                                    Gamma (30-100Hz)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="eeg-plot-container">
+                        <div id="eeg-plot" class="eeg-plot"></div>
+                        <div class="plot-controls">
+                            <button class="control-btn" id="play-pause-btn">
+                                <i class="fas fa-play"></i>
+                            </button>
+                            <button class="control-btn" id="load-real-data-btn">
+                                <i class="fas fa-database"></i>
+                                Load Sleep-EDF Data
+                            </button>
+                            <button class="control-btn highlight" id="detect-events-btn">
+                                <i class="fas fa-search"></i>
+                                Detect Events
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="timeline-section">
+                        <div class="timeline-header">
+                            <span>Sleep Timeline</span>
+                            <span class="time-display" id="time-display">00:00:00</span>
+                        </div>
+                        <div class="timeline-slider-container">
+                            <input type="range" id="timeline-slider" class="timeline-slider" min="0" max="100" value="0">
+                            <div class="timeline-annotations" id="timeline-annotations">
+                                <!-- Event annotations will be added here -->
+                            </div>
+                        </div>
+                        <div class="playback-speed">
+                            <label>Speed:</label>
+                            <select id="playback-speed">
+                                <option value="0.5">0.5x</option>
+                                <option value="1" selected>1x</option>
+                                <option value="2">2x</option>
+                                <option value="5">5x</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel - Sleep Analysis -->
+            <div class="right-panel">
+                <!-- Current Sleep Stage -->
+                <div class="sleep-stage-display">
+                    <div class="stage-header">
+                        <h3><i class="fas fa-moon"></i> Current Sleep Stage</h3>
+                        <div class="stage-confidence">Confidence: <span id="stage-confidence">94%</span></div>
+                    </div>
+                    <div class="current-stage-card">
+                        <div class="stage-visual">
+                            <div class="stage-icon" id="current-stage-icon">
+                                <i class="fas fa-cloud"></i>
+                            </div>
+                            <div class="stage-waveform">
+                                <div id="mini-eeg-plot" class="mini-eeg-plot"></div>
+                            </div>
+                        </div>
+                        <div class="stage-details">
+                            <h4 id="current-stage-name">REM Sleep</h4>
+                            <p id="current-stage-description">Dreaming phase, rapid eye movement</p>
+                            <div class="stage-metrics">
+                                <div class="metric">
+                                    <span>Duration:</span>
+                                    <span id="stage-duration">12m 34s</span>
+                                </div>
+                                <div class="metric">
+                                    <span>Cycles:</span>
+                                    <span id="cycle-count">3rd cycle</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sleep Cycle Overview -->
+                <div class="sleep-cycle-overview">
+                    <div class="cycle-header">
+                        <h3><i class="fas fa-chart-pie"></i> Sleep Cycle Distribution</h3>
+                        <div class="cycle-quality">
+                            <span class="quality-score" id="sleep-score">87</span>
+                            <span class="quality-label">Sleep Quality</span>
+                        </div>
+                    </div>
+                    <div class="cycle-chart-container">
+                        <div id="sleep-cycle-chart" class="sleep-cycle-chart"></div>
+                        <div class="cycle-legend">
+                            <div class="legend-item">
+                                <span class="legend-color n1-color"></span>
+                                <span>N1 (Light)</span>
+                                <span class="legend-percent" id="n1-percent">5%</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color n2-color"></span>
+                                <span>N2 (Stable)</span>
+                                <span class="legend-percent" id="n2-percent">45%</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color n3-color"></span>
+                                <span>N3 (Deep)</span>
+                                <span class="legend-percent" id="n3-percent">25%</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color rem-color"></span>
+                                <span>REM</span>
+                                <span class="legend-percent" id="rem-percent">25%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- REM Sleep Monitor -->
+                <div class="rem-monitor">
+                    <div class="rem-header">
+                        <h3><i class="fas fa-eye"></i> REM Sleep Monitor</h3>
+                        <div class="rem-status active">Active</div>
+                    </div>
+                    <div class="rem-timeline">
+                        <div id="rem-timeline-plot" class="rem-timeline-plot"></div>
+                        <div class="rem-stats">
+                            <div class="rem-stat">
+                                <span class="stat-value" id="rem-episodes">4</span>
+                                <span class="stat-label">Episodes</span>
+                            </div>
+                            <div class="rem-stat">
+                                <span class="stat-value" id="rem-total">1h 52m</span>
+                                <span class="stat-label">Total Duration</span>
+                            </div>
+                            <div class="rem-stat">
+                                <span class="stat-value" id="rem-efficiency">92%</span>
+                                <span class="stat-label">Efficiency</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" data-tab="home">
+                <i class="fas fa-home"></i>
+                <span>Home</span>
+            </button>
+            <button class="nav-item" data-tab="brain-regions">
+                <i class="fas fa-brain"></i>
+                <span>Brain Regions</span>
+            </button>
+            <button class="nav-item" data-tab="sleep-stages">
+                <i class="fas fa-bed"></i>
+                <span>Sleep Stages</span>
+            </button>
+            <button class="nav-item" data-tab="reports">
+                <i class="fas fa-chart-bar"></i>
+                <span>Reports</span>
+            </button>
+        </nav>
+
+        <!-- Tab Content Panels -->
+        
+        <!-- Brain Regions Tab -->
+        <div class="tab-content" id="brain-regions-content">
+            <div class="tab-header">
+                <h2><i class="fas fa-brain"></i> Brain Regions Analysis</h2>
+                <p>Real EEG data from different electrode positions</p>
+            </div>
+            
+            <div class="regions-grid">
+                <div class="region-panel frontal-region">
+                    <div class="region-header">
+                        <div class="region-icon">
+                            <i class="fas fa-lightbulb"></i>
+                        </div>
+                        <div class="region-info">
+                            <h3>Frontal Cortex</h3>
+                            <p>Electrodes: Fp1, Fp2, F3, F4, F7, F8</p>
+                            <span class="region-function">Executive functions, decision-making</span>
+                        </div>
+                    </div>
+                    <div class="region-plot-container">
+                        <div id="frontal-plot" class="region-plot"></div>
+                    </div>
+                    <div class="region-metrics">
+                        <div class="metric-item">
+                            <span class="metric-label">Dominant Band:</span>
+                            <span class="metric-value" id="frontal-dominant">Beta (18Hz)</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Activity Level:</span>
+                            <span class="metric-value" id="frontal-activity">High</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="region-panel temporal-region">
+                    <div class="region-header">
+                        <div class="region-icon">
+                            <i class="fas fa-music"></i>
+                        </div>
+                        <div class="region-info">
+                            <h3>Temporal Cortex</h3>
+                            <p>Electrodes: T3, T4, T5, T6</p>
+                            <span class="region-function">Memory, auditory processing</span>
+                        </div>
+                    </div>
+                    <div class="region-plot-container">
+                        <div id="temporal-plot" class="region-plot"></div>
+                    </div>
+                    <div class="region-metrics">
+                        <div class="metric-item">
+                            <span class="metric-label">Dominant Band:</span>
+                            <span class="metric-value" id="temporal-dominant">Theta (6Hz)</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Activity Level:</span>
+                            <span class="metric-value" id="temporal-activity">Moderate</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="region-panel parietal-region">
+                    <div class="region-header">
+                        <div class="region-icon">
+                            <i class="fas fa-hand-paper"></i>
+                        </div>
+                        <div class="region-info">
+                            <h3>Parietal Cortex</h3>
+                            <p>Electrodes: P3, P4, Pz</p>
+                            <span class="region-function">Sensory integration, spatial awareness</span>
+                        </div>
+                    </div>
+                    <div class="region-plot-container">
+                        <div id="parietal-plot" class="region-plot"></div>
+                    </div>
+                    <div class="region-metrics">
+                        <div class="metric-item">
+                            <span class="metric-label">Dominant Band:</span>
+                            <span class="metric-value" id="parietal-dominant">Alpha (10Hz)</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Activity Level:</span>
+                            <span class="metric-value" id="parietal-activity">Low</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="region-panel occipital-region">
+                    <div class="region-header">
+                        <div class="region-icon">
+                            <i class="fas fa-eye"></i>
+                        </div>
+                        <div class="region-info">
+                            <h3>Occipital Cortex</h3>
+                            <p>Electrodes: O1, O2</p>
+                            <span class="region-function">Visual processing</span>
+                        </div>
+                    </div>
+                    <div class="region-plot-container">
+                        <div id="occipital-plot" class="region-plot"></div>
+                    </div>
+                    <div class="region-metrics">
+                        <div class="metric-item">
+                            <span class="metric-label">Dominant Band:</span>
+                            <span class="metric-value" id="occipital-dominant">Alpha (9Hz)</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Activity Level:</span>
+                            <span class="metric-value" id="occipital-activity">Very Low</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sleep Stages Tab -->
+        <div class="tab-content" id="sleep-stages-content">
+            <div class="tab-header">
+                <h2><i class="fas fa-bed"></i> Sleep Stages Analysis</h2>
+                <p>Detailed EEG patterns for each sleep stage</p>
+            </div>
+            
+            <div class="sleep-stages-grid">
+                <div class="sleep-stage-panel n1-stage">
+                    <div class="stage-panel-header">
+                        <div class="stage-panel-icon">
+                            <i class="fas fa-eye-slash"></i>
+                        </div>
+                        <div class="stage-panel-info">
+                            <h3>NREM Stage 1 (N1)</h3>
+                            <p>Light sleep, transition from wakefulness</p>
+                        </div>
+                    </div>
+                    <div class="stage-example-plot">
+                        <div id="n1-example-plot" class="stage-plot"></div>
+                    </div>
+                    <div class="stage-characteristics">
+                        <h4>Key Characteristics:</h4>
+                        <ul>
+                            <li>Alpha wave reduction (8-12 Hz)</li>
+                            <li>Theta wave emergence (4-8 Hz)</li>
+                            <li>Hypnagogic hallucinations possible</li>
+                            <li>Easy to wake up</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="sleep-stage-panel n2-stage">
+                    <div class="stage-panel-header">
+                        <div class="stage-panel-icon">
+                            <i class="fas fa-moon"></i>
+                        </div>
+                        <div class="stage-panel-info">
+                            <h3>NREM Stage 2 (N2)</h3>
+                            <p>True sleep, sleep spindles and K-complexes</p>
+                        </div>
+                    </div>
+                    <div class="stage-example-plot">
+                        <div id="n2-example-plot" class="stage-plot"></div>
+                    </div>
+                    <div class="stage-characteristics">
+                        <h4>Key Characteristics:</h4>
+                        <ul>
+                            <li>Sleep spindles (12-16 Hz bursts)</li>
+                            <li>K-complexes (high amplitude waves)</li>
+                            <li>Reduced muscle activity</li>
+                            <li>45-55% of total sleep time</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="sleep-stage-panel n3-stage">
+                    <div class="stage-panel-header">
+                        <div class="stage-panel-icon">
+                            <i class="fas fa-bed"></i>
+                        </div>
+                        <div class="stage-panel-info">
+                            <h3>NREM Stage 3 (N3)</h3>
+                            <p>Deep sleep, slow wave sleep (SWS)</p>
+                        </div>
+                    </div>
+                    <div class="stage-example-plot">
+                        <div id="n3-example-plot" class="stage-plot"></div>
+                    </div>
+                    <div class="stage-characteristics">
+                        <h4>Key Characteristics:</h4>
+                        <ul>
+                            <li>Delta waves dominant (0.5-4 Hz)</li>
+                            <li>Very high amplitude waves</li>
+                            <li>Difficult to wake up</li>
+                            <li>Physical restoration occurs</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="sleep-stage-panel rem-stage">
+                    <div class="stage-panel-header">
+                        <div class="stage-panel-icon">
+                            <i class="fas fa-cloud"></i>
+                        </div>
+                        <div class="stage-panel-info">
+                            <h3>REM Sleep</h3>
+                            <p>Rapid eye movement, dreaming stage</p>
+                        </div>
+                    </div>
+                    <div class="stage-example-plot">
+                        <div id="rem-example-plot" class="stage-plot"></div>
+                    </div>
+                    <div class="stage-characteristics">
+                        <h4>Key Characteristics:</h4>
+                        <ul>
+                            <li>Fast, low-amplitude waves</li>
+                            <li>Similar to wakefulness EEG</li>
+                            <li>Rapid eye movements</li>
+                            <li>Memory consolidation and dreaming</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reports Tab -->
+        <div class="tab-content" id="reports-content">
+            <div class="tab-header">
+                <h2><i class="fas fa-chart-bar"></i> Sleep Analysis Report</h2>
+                <p>Comprehensive sleep session summary</p>
+            </div>
+            
+            <div class="reports-grid">
+                <div class="report-summary-card">
+                    <h3>Session Summary</h3>
+                    <div class="summary-content" id="sleep-summary">
+                        <div class="summary-item">
+                            <span class="summary-label">Total Sleep Time:</span>
+                            <span class="summary-value">7h 42m</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Sleep Efficiency:</span>
+                            <span class="summary-value">89%</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">REM Percentage:</span>
+                            <span class="summary-value">23%</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Deep Sleep:</span>
+                            <span class="summary-value">18%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="events-timeline-card">
+                    <h3>Events Timeline</h3>
+                    <div id="events-timeline-plot" class="events-timeline-plot"></div>
+                </div>
+
+                <div class="annotations-card">
+                    <h3>Detected Events</h3>
+                    <div class="annotations-list" id="annotations-list">
+                        <div class="annotation-item spindle-event">
+                            <div class="annotation-marker"></div>
+                            <div class="annotation-content">
+                                <span class="annotation-time">23:45:12</span>
+                                <span class="annotation-text">Sleep spindle detected</span>
+                                <span class="annotation-detail">12-16 Hz burst, 0.8s duration</span>
+                            </div>
+                        </div>
+                        <div class="annotation-item k-complex-event">
+                            <div class="annotation-marker"></div>
+                            <div class="annotation-content">
+                                <span class="annotation-time">00:12:45</span>
+                                <span class="annotation-text">K-complex detected</span>
+                                <span class="annotation-detail">High amplitude negative wave</span>
+                            </div>
+                        </div>
+                        <div class="annotation-item rem-burst-event">
+                            <div class="annotation-marker"></div>
+                            <div class="annotation-content">
+                                <span class="annotation-time">02:15:30</span>
+                                <span class="annotation-text">REM burst detected</span>
+                                <span class="annotation-detail">Rapid eye movement episode</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="recommendations-card">
+                    <h3>Sleep Recommendations</h3>
+                    <div class="recommendations-list">
+                        <div class="recommendation-item positive">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Excellent deep sleep duration (18%)</span>
+                        </div>
+                        <div class="recommendation-item neutral">
+                            <i class="fas fa-info-circle"></i>
+                            <span>Consider earlier bedtime for optimal REM</span>
+                        </div>
+                        <div class="recommendation-item positive">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Good sleep efficiency (89%)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Event Detail Tooltip -->
+        <div class="event-tooltip" id="event-tooltip">
+            <div class="tooltip-header">
+                <span class="event-type" id="tooltip-event-type">Sleep Spindle</span>
+                <span class="event-time" id="tooltip-event-time">23:45:12</span>
+            </div>
+            <div class="tooltip-content">
+                <p id="tooltip-description">Sleep spindles are brief bursts of oscillatory brain activity visible on EEG, typically 12-16 Hz and lasting 0.5-2 seconds.</p>
+                <div class="tooltip-metrics">
+                    <div class="tooltip-metric">
+                        <span>Duration:</span>
+                        <span id="tooltip-duration">0.8s</span>
+                    </div>
+                    <div class="tooltip-metric">
+                        <span>Frequency:</span>
+                        <span id="tooltip-frequency">14.2 Hz</span>
+                    </div>
+                    <div class="tooltip-metric">
+                        <span>Amplitude:</span>
+                        <span id="tooltip-amplitude">45 μV</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="main.js"></script>
+</body>
+</html>
