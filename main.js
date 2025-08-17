@@ -1,54 +1,44 @@
-import * as THREE from 'three';
-
-// Advanced Medical Brain Visualization System
-class AdvancedBrainVisualizer {
+// Modern Pastel EEG Sleep Monitor
+class EEGSleepMonitor {
     constructor() {
         this.data = null;
-        this.scene = null;
-        this.camera = null;
-        this.renderer = null;
-        this.brain = null;
-        this.electrodes = [];
-        this.animationId = null;
         this.isPlaying = false;
-        this.isRecording = false;
         this.currentTimeIndex = 0;
         this.maxTime = 0;
-        this.currentMode = 'medical-3d';
-        this.currentVideo = null;
-        this.analysisMode = 'real-time';
-        this.frequencyFilter = 'all';
+        this.activeWave = 'all';
+        this.currentTab = 'home';
+        this.animationId = null;
+        this.playAnimation = null;
         
-        // Advanced settings
-        this.settings = {
-            opacity: 0.8,
-            sensitivity: 5,
-            animationSpeed: 1.0,
-            showConnectivity: true,
-            realTimeAnalysis: true
+        // Brain videos
+        this.videos = [];
+        this.currentVideoIndex = 0;
+        
+        // Wave colors (pastel palette)
+        this.waveColors = {
+            delta: '#A8D8EA',    // Pastel blue
+            theta: '#C8A8E9',    // Lavender
+            alpha: '#A8E6CF',    // Mint green
+            beta: '#FFD3A5',     // Peach
+            gamma: '#FFA8CC',    // Pink
+            all: '#E0E0E0'       // Light gray
         };
         
-        // EEG electrode positions (enhanced 10-20 system)
-        this.electrodePositions = {
-            'Fp1': [-0.35, 0.75, 0.95], 'Fp2': [0.35, 0.75, 0.95],
-            'F7': [-0.85, 0.3, 0.45], 'F3': [-0.45, 0.55, 0.85], 'Fz': [0, 0.65, 0.95], 
-            'F4': [0.45, 0.55, 0.85], 'F8': [0.85, 0.3, 0.45],
-            'T3': [-0.95, 0, 0.25], 'C3': [-0.55, 0.15, 0.95], 'Cz': [0, 0.25, 1.05], 
-            'C4': [0.55, 0.15, 0.95], 'T4': [0.95, 0, 0.25],
-            'T5': [-0.85, -0.45, 0.35], 'P3': [-0.45, -0.35, 0.85], 'Pz': [0, -0.25, 1.0], 
-            'P4': [0.45, -0.35, 0.85], 'T6': [0.85, -0.45, 0.35],
-            'O1': [-0.25, -0.75, 0.65], 'O2': [0.25, -0.75, 0.65]
-        };
-        
-        // Real-time metrics
+        // Simulated metrics
         this.metrics = {
-            alphaPower: 0,
-            betaPower: 0,
-            thetaPower: 0,
-            gammaPower: 0,
-            connectivity: [],
-            dominantFreq: 0,
-            coherence: 0
+            sleepStage: 'REM',
+            stageTimer: 0,
+            brainActivity: {
+                frontal: 75,
+                parietal: 62,
+                temporal: 58,
+                occipital: 84
+            },
+            annotations: [
+                { time: 3, type: 'blink', text: 'Blink detected — Frontal spike' },
+                { time: 45, type: 'rem', text: 'REM sleep starts here' },
+                { time: 83, type: 'alpha-peak', text: 'Strong alpha wave activity' }
+            ]
         };
         
         this.init();
@@ -56,770 +46,321 @@ class AdvancedBrainVisualizer {
 
     init() {
         this.setupEventListeners();
-        this.initThreeJS();
-        this.createAdvancedBrainModel();
-        this.createElectrodes();
-        this.setupElectrodeGrid();
-        this.setupConnectivityMatrix();
-        this.setupVideoBackgrounds();
-        this.startRealTimeAnalysis();
-        this.animate();
-        this.updateViewMode();
+        this.setupCanvas();
+        this.setupVideos();
+        this.setupTimelineEvents();
+        this.startRealTimeUpdates();
+        this.startEEGAnimation();
+        this.simulateBlinkDetection();
     }
 
     setupEventListeners() {
-        // Main control buttons
-        document.getElementById('load-data-btn').addEventListener('click', () => this.loadEEGData());
-        document.getElementById('play-pause-btn').addEventListener('click', () => this.togglePlayback());
-        document.getElementById('record-btn').addEventListener('click', () => this.toggleRecording());
-        document.getElementById('export-btn').addEventListener('click', () => this.exportData());
-        
-        // Mode selectors
-        document.getElementById('brain-mode').addEventListener('change', (e) => this.changeBrainMode(e.target.value));
-        document.getElementById('analysis-mode').addEventListener('change', (e) => this.changeAnalysisMode(e.target.value));
-        
+        // Wave filter buttons
+        document.querySelectorAll('.wave-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.setActiveWave(e.target.dataset.wave);
+            });
+        });
+
+        // Playback controls
+        document.getElementById('play-btn').addEventListener('click', () => this.togglePlayback());
+        document.getElementById('load-btn').addEventListener('click', () => this.loadEEGData());
+        document.getElementById('rem-highlight-btn').addEventListener('click', () => this.highlightREM());
+
         // Timeline
-        document.getElementById('timeline-slider').addEventListener('input', (e) => this.updateTimePosition(e.target.value));
-        
-        // Frequency filters
-        document.querySelectorAll('.freq-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => this.setFrequencyFilter(e.target.dataset.freq));
+        document.getElementById('timeline-slider').addEventListener('input', (e) => {
+            this.updateTimePosition(e.target.value);
         });
-        
-        // Settings sliders
-        document.getElementById('opacity-slider').addEventListener('input', (e) => this.updateOpacity(e.target.value));
-        document.getElementById('sensitivity-slider').addEventListener('input', (e) => this.updateSensitivity(e.target.value));
-        document.getElementById('speed-slider').addEventListener('input', (e) => this.updateSpeed(e.target.value));
-        
-        // Brain regions
-        document.querySelectorAll('.region-item').forEach(item => {
-            item.addEventListener('click', (e) => this.focusOnRegion(e.target.dataset.region));
+
+        // Bottom navigation
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                this.switchTab(e.target.closest('.nav-item').dataset.tab);
+            });
         });
-        
-        // Window resize
-        window.addEventListener('resize', () => this.onWindowResize());
+
+        // Profile picture upload
+        document.getElementById('profile-pic').addEventListener('click', () => {
+            this.uploadProfilePicture();
+        });
+
+        // Brain region cards
+        document.querySelectorAll('.region-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                this.focusOnRegion(e.target.closest('.region-card'));
+            });
+        });
+
+        // Sleep stage cards
+        document.querySelectorAll('.sleep-stage-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                this.showStageDetails(e.target.closest('.sleep-stage-card'));
+            });
+        });
     }
 
-    initThreeJS() {
-        const container = document.getElementById('brain-canvas');
+    setupCanvas() {
+        this.canvas = document.getElementById('eeg-canvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.resizeCanvas();
         
-        // Scene setup with advanced rendering
-        this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x0a0e1a);
-        this.scene.fog = new THREE.Fog(0x0a0e1a, 10, 50);
+        // Setup region charts
+        this.setupRegionCharts();
+        this.setupSleepStageWaves();
         
-        // Camera with enhanced controls
-        this.camera = new THREE.PerspectiveCamera(
-            60, 
-            container.clientWidth / container.clientHeight, 
-            0.1, 
-            1000
-        );
-        this.camera.position.set(0, 0, 4);
+        window.addEventListener('resize', () => this.resizeCanvas());
+    }
+
+    setupVideos() {
+        // Load brain videos
+        for (let i = 1; i <= 5; i++) {
+            const video = document.createElement('video');
+            video.src = `brain_video_${i}.mp4`;
+            video.autoplay = true;
+            video.muted = true;
+            video.loop = true;
+            video.style.display = 'none';
+            this.videos.push(video);
+        }
         
-        // Advanced renderer setup
-        this.renderer = new THREE.WebGLRenderer({ 
-            antialias: true, 
-            alpha: true,
-            powerPreference: "high-performance"
+        // Set the first video as subject video
+        const subjectVideo = document.getElementById('subject-video');
+        subjectVideo.src = this.videos[0].src;
+        subjectVideo.play().catch(e => console.log('Video autoplay prevented'));
+    }
+
+    setupTimelineEvents() {
+        const timelineEvents = document.getElementById('timeline-events');
+        
+        this.metrics.annotations.forEach(annotation => {
+            const marker = document.createElement('div');
+            marker.className = `event-marker ${annotation.type.replace('-', '-')}`;
+            marker.style.left = `${(annotation.time / 120) * 100}%`;
+            marker.title = annotation.text;
+            
+            marker.addEventListener('click', () => {
+                this.showTooltip(annotation, marker);
+                this.currentTimeIndex = annotation.time;
+                document.getElementById('timeline-slider').value = annotation.time;
+                this.updateTimePosition(annotation.time);
+            });
+            
+            timelineEvents.appendChild(marker);
         });
-        this.renderer.setSize(container.clientWidth, container.clientHeight);
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        this.renderer.shadowMap.enabled = true;
-        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = 1.2;
-        container.appendChild(this.renderer.domElement);
-        
-        // Advanced lighting system
-        this.setupAdvancedLighting();
-        
-        // Enhanced controls
-        this.setupAdvancedControls();
     }
 
-    setupAdvancedLighting() {
-        // Ambient light with color temperature
-        const ambientLight = new THREE.AmbientLight(0x404080, 0.3);
-        this.scene.add(ambientLight);
-        
-        // Main key light
-        const keyLight = new THREE.DirectionalLight(0xffffff, 1.5);
-        keyLight.position.set(10, 10, 5);
-        keyLight.castShadow = true;
-        keyLight.shadow.mapSize.width = 4096;
-        keyLight.shadow.mapSize.height = 4096;
-        keyLight.shadow.camera.near = 0.5;
-        keyLight.shadow.camera.far = 500;
-        this.scene.add(keyLight);
-        
-        // Fill lights for even illumination
-        const fillLight1 = new THREE.DirectionalLight(0x4080ff, 0.8);
-        fillLight1.position.set(-5, 5, 3);
-        this.scene.add(fillLight1);
-        
-        const fillLight2 = new THREE.DirectionalLight(0xff8040, 0.6);
-        fillLight2.position.set(3, -3, -5);
-        this.scene.add(fillLight2);
-        
-        // Rim light for brain contour
-        const rimLight = new THREE.DirectionalLight(0x00ffaa, 0.4);
-        rimLight.position.set(-10, -5, -10);
-        this.scene.add(rimLight);
-        
-        // Point lights for electrodes
-        this.electrodeLight = new THREE.PointLight(0x00d4aa, 0.5, 10);
-        this.electrodeLight.position.set(0, 2, 2);
-        this.scene.add(this.electrodeLight);
+    resizeCanvas() {
+        const rect = this.canvas.getBoundingClientRect();
+        this.canvas.width = rect.width * devicePixelRatio;
+        this.canvas.height = rect.height * devicePixelRatio;
+        this.ctx.scale(devicePixelRatio, devicePixelRatio);
+        this.canvas.style.width = rect.width + 'px';
+        this.canvas.style.height = rect.height + 'px';
     }
 
-    setupAdvancedControls() {
-        const controls = {
-            mouseX: 0,
-            mouseY: 0,
-            isMouseDown: false,
-            isDragging: false
+    startEEGAnimation() {
+        const animate = () => {
+            this.drawEEGWaves();
+            this.animationId = requestAnimationFrame(animate);
+        };
+        animate();
+    }
+
+    drawEEGWaves() {
+        const width = this.canvas.offsetWidth;
+        const height = this.canvas.offsetHeight;
+        
+        this.ctx.clearRect(0, 0, width, height);
+        
+        // Draw grid
+        this.drawGrid(width, height);
+        
+        // Draw waves based on active filter
+        if (this.activeWave === 'all') {
+            this.drawAllWaves(width, height);
+        } else {
+            this.drawSingleWave(width, height, this.activeWave);
+        }
+        
+        // Draw current time indicator
+        this.drawTimeIndicator(width, height);
+        
+        // Draw annotations
+        this.drawAnnotations(width, height);
+    }
+
+    drawGrid(width, height) {
+        this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.05)';
+        this.ctx.lineWidth = 1;
+        
+        // Vertical lines
+        for (let i = 0; i <= 10; i++) {
+            const x = (width / 10) * i;
+            this.ctx.beginPath();
+            this.ctx.moveTo(x, 0);
+            this.ctx.lineTo(x, height);
+            this.ctx.stroke();
+        }
+        
+        // Horizontal lines
+        for (let i = 0; i <= 5; i++) {
+            const y = (height / 5) * i;
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, y);
+            this.ctx.lineTo(width, y);
+            this.ctx.stroke();
+        }
+    }
+
+    drawAllWaves(width, height) {
+        const waves = ['delta', 'theta', 'alpha', 'beta', 'gamma'];
+        const waveHeight = height / (waves.length + 1);
+        
+        waves.forEach((wave, index) => {
+            const centerY = waveHeight * (index + 1);
+            this.drawWaveform(width, centerY, wave, waveHeight * 0.3);
+            
+            // Draw wave label
+            this.ctx.fillStyle = this.waveColors[wave];
+            this.ctx.font = '12px Inter';
+            this.ctx.fillText(wave.toUpperCase(), 10, centerY - waveHeight * 0.2);
+        });
+    }
+
+    drawSingleWave(width, height, waveType) {
+        const centerY = height / 2;
+        this.drawWaveform(width, centerY, waveType, height * 0.3);
+        
+        // Draw wave label
+        this.ctx.fillStyle = this.waveColors[waveType];
+        this.ctx.font = 'bold 16px Inter';
+        this.ctx.fillText(waveType.toUpperCase() + ' WAVES', 20, 30);
+    }
+
+    drawWaveform(width, centerY, waveType, amplitude) {
+        this.ctx.strokeStyle = this.waveColors[waveType];
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        
+        const time = Date.now() * 0.001;
+        const frequency = this.getWaveFrequency(waveType);
+        const points = width * 2;
+        
+        for (let i = 0; i < points; i++) {
+            const x = (i / points) * width;
+            const phase = (x / width) * frequency * Math.PI * 2 + time;
+            
+            // Add some realistic EEG noise
+            const noise = (Math.random() - 0.5) * 0.1;
+            const baseWave = Math.sin(phase) * amplitude;
+            const harmonics = Math.sin(phase * 2) * amplitude * 0.3 + 
+                            Math.sin(phase * 3) * amplitude * 0.1;
+            
+            const y = centerY + baseWave + harmonics + noise * amplitude;
+            
+            if (i === 0) {
+                this.ctx.moveTo(x, y);
+            } else {
+                this.ctx.lineTo(x, y);
+            }
+        }
+        
+        this.ctx.stroke();
+        
+        // Add glow effect
+        this.ctx.shadowColor = this.waveColors[waveType];
+        this.ctx.shadowBlur = 10;
+        this.ctx.stroke();
+        this.ctx.shadowBlur = 0;
+    }
+
+    getWaveFrequency(waveType) {
+        const frequencies = {
+            delta: 2,     // 0.5-4 Hz
+            theta: 4,     // 4-8 Hz
+            alpha: 8,     // 8-12 Hz
+            beta: 16,     // 12-30 Hz
+            gamma: 32     // 30-100 Hz
+        };
+        return frequencies[waveType] || 8;
+    }
+
+    drawTimeIndicator(width, height) {
+        if (!this.data || this.maxTime === 0) return;
+        
+        const x = (this.currentTimeIndex / this.maxTime) * width;
+        
+        this.ctx.strokeStyle = '#667eea';
+        this.ctx.lineWidth = 2;
+        this.ctx.setLineDash([5, 5]);
+        this.ctx.beginPath();
+        this.ctx.moveTo(x, 0);
+        this.ctx.lineTo(x, height);
+        this.ctx.stroke();
+        this.ctx.setLineDash([]);
+    }
+
+    drawAnnotations(width, height) {
+        if (!this.data || this.maxTime === 0) return;
+        
+        this.metrics.annotations.forEach(annotation => {
+            const x = (annotation.time / 120) * width;
+            
+            // Draw annotation marker
+            this.ctx.fillStyle = this.getAnnotationColor(annotation.type);
+            this.ctx.fillRect(x - 2, 10, 4, height - 20);
+            
+            // Draw annotation text
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            this.ctx.font = '10px Inter';
+            this.ctx.fillText(annotation.type.toUpperCase(), x + 5, 25);
+        });
+    }
+
+    getAnnotationColor(type) {
+        const colors = {
+            'blink': this.waveColors.beta,
+            'rem': this.waveColors.gamma,
+            'alpha-peak': this.waveColors.alpha
+        };
+        return colors[type] || '#666';
+    }
+
+    setActiveWave(wave) {
+        // Update button states
+        document.querySelectorAll('.wave-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        document.querySelector(`[data-wave="${wave}"]`).classList.add('active');
+        
+        this.activeWave = wave;
+        
+        // Switch to corresponding brain video
+        this.switchBrainVideo(wave);
+    }
+
+    switchBrainVideo(wave) {
+        const videoMap = {
+            'all': 0,
+            'delta': 1,
+            'theta': 2,
+            'alpha': 3,
+            'beta': 4,
+            'gamma': 4  // Use same as beta for now
         };
         
-        const container = this.renderer.domElement;
-        
-        container.addEventListener('mousedown', (event) => {
-            controls.isMouseDown = true;
-            controls.mouseX = event.clientX;
-            controls.mouseY = event.clientY;
-            controls.isDragging = false;
-        });
-        
-        container.addEventListener('mouseup', (event) => {
-            if (!controls.isDragging) {
-                this.handleClick(event);
-            }
-            controls.isMouseDown = false;
-            controls.isDragging = false;
-        });
-        
-        container.addEventListener('mousemove', (event) => {
-            if (controls.isMouseDown) {
-                const deltaX = event.clientX - controls.mouseX;
-                const deltaY = event.clientY - controls.mouseY;
-                
-                if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
-                    controls.isDragging = true;
-                    
-                    if (this.brain) {
-                        this.brain.rotation.y += deltaX * 0.01;
-                        this.brain.rotation.x += deltaY * 0.01;
-                    }
-                }
-                
-                controls.mouseX = event.clientX;
-                controls.mouseY = event.clientY;
-            } else {
-                this.handleMouseMove(event);
-            }
-        });
-        
-        container.addEventListener('wheel', (event) => {
-            event.preventDefault();
-            const delta = event.deltaY * 0.001;
-            this.camera.position.z = Math.max(2, Math.min(8, this.camera.position.z + delta));
-        });
-    }
-
-    createAdvancedBrainModel() {
-        const brainGroup = new THREE.Group();
-        
-        // Create different brain models based on mode
-        switch (this.currentMode) {
-            case 'medical-3d':
-                this.createMedicalBrainModel(brainGroup);
-                break;
-            case 'neural-network':
-                this.createNeuralNetworkModel(brainGroup);
-                break;
-            case 'activation-map':
-                this.createActivationMapModel(brainGroup);
-                break;
-            case 'anatomical':
-                this.createAnatomicalModel(brainGroup);
-                break;
-            case 'mri-simulation':
-                this.createMRISimulationModel(brainGroup);
-                break;
-        }
-        
-        this.brain = brainGroup;
-        this.scene.add(this.brain);
-    }
-
-    createMedicalBrainModel(brainGroup) {
-        // Create medical-grade brain with proper anatomy
-        const brainGeometry = this.createAdvancedBrainGeometry();
-        
-        // Medical brain material with subsurface scattering effect
-        const brainMaterial = new THREE.MeshPhysicalMaterial({
-            color: 0xd4a574,
-            roughness: 0.8,
-            metalness: 0.1,
-            clearcoat: 0.1,
-            clearcoatRoughness: 0.8,
-            transmission: 0.1,
-            thickness: 0.5,
-            ior: 1.4,
-            opacity: this.settings.opacity
-        });
-        
-        // Left hemisphere
-        const leftHemisphere = new THREE.Mesh(brainGeometry, brainMaterial);
-        leftHemisphere.scale.set(-1, 1, 1);
-        leftHemisphere.position.set(-0.05, 0, 0);
-        leftHemisphere.castShadow = true;
-        leftHemisphere.receiveShadow = true;
-        brainGroup.add(leftHemisphere);
-        
-        // Right hemisphere
-        const rightHemisphere = new THREE.Mesh(brainGeometry, brainMaterial.clone());
-        rightHemisphere.position.set(0.05, 0, 0);
-        rightHemisphere.castShadow = true;
-        rightHemisphere.receiveShadow = true;
-        brainGroup.add(rightHemisphere);
-        
-        // Add advanced anatomical structures
-        this.addAdvancedAnatomicalStructures(brainGroup);
-    }
-
-    createNeuralNetworkModel(brainGroup) {
-        // Create neural network visualization
-        const nodeGeometry = new THREE.SphereGeometry(0.02, 8, 8);
-        const nodeMaterial = new THREE.MeshPhongMaterial({
-            color: 0x00d4aa,
-            emissive: 0x002244,
-            transparent: true,
-            opacity: 0.8
-        });
-        
-        // Create network nodes
-        for (let i = 0; i < 200; i++) {
-            const node = new THREE.Mesh(nodeGeometry, nodeMaterial.clone());
-            
-            // Position nodes in brain-like distribution
-            const phi = Math.acos(-1 + (2 * i) / 200);
-            const theta = Math.sqrt(200 * Math.PI) * phi;
-            const radius = 0.8 + Math.random() * 0.4;
-            
-            node.position.setFromSphericalCoords(radius, phi, theta);
-            brainGroup.add(node);
-            
-            // Add to electrode list for interaction
-            this.electrodes.push(node);
-        }
-        
-        // Create neural connections
-        this.createNeuralConnections(brainGroup);
-    }
-
-    createActivationMapModel(brainGroup) {
-        // Create heat map overlay on brain surface
-        const brainGeometry = this.createAdvancedBrainGeometry();
-        
-        // Shader material for activation visualization
-        const activationMaterial = new THREE.ShaderMaterial({
-            uniforms: {
-                time: { value: 0 },
-                activationData: { value: new THREE.DataTexture() }
-            },
-            vertexShader: `
-                varying vec3 vPosition;
-                varying vec3 vNormal;
-                void main() {
-                    vPosition = position;
-                    vNormal = normal;
-                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                }
-            `,
-            fragmentShader: `
-                uniform float time;
-                varying vec3 vPosition;
-                varying vec3 vNormal;
-                
-                vec3 heatmapColor(float value) {
-                    vec3 blue = vec3(0.0, 0.0, 1.0);
-                    vec3 cyan = vec3(0.0, 1.0, 1.0);
-                    vec3 yellow = vec3(1.0, 1.0, 0.0);
-                    vec3 red = vec3(1.0, 0.0, 0.0);
-                    
-                    if (value < 0.33) {
-                        return mix(blue, cyan, value / 0.33);
-                    } else if (value < 0.66) {
-                        return mix(cyan, yellow, (value - 0.33) / 0.33);
-                    } else {
-                        return mix(yellow, red, (value - 0.66) / 0.34);
-                    }
-                }
-                
-                void main() {
-                    float activation = sin(time + vPosition.x * 5.0) * 0.5 + 0.5;
-                    vec3 color = heatmapColor(activation);
-                    gl_FragColor = vec4(color, 0.8);
-                }
-            `,
-            transparent: true
-        });
-        
-        const activationMesh = new THREE.Mesh(brainGeometry, activationMaterial);
-        brainGroup.add(activationMesh);
-        
-        this.activationMaterial = activationMaterial;
-    }
-
-    createAnatomicalModel(brainGroup) {
-        // Detailed anatomical brain model
-        this.createMedicalBrainModel(brainGroup);
-        
-        // Add anatomical labels
-        this.addAnatomicalLabels(brainGroup);
-    }
-
-    createMRISimulationModel(brainGroup) {
-        // Create MRI-like slices visualization
-        const sliceGeometry = new THREE.PlaneGeometry(2, 2);
-        const sliceMaterial = new THREE.MeshBasicMaterial({
-            transparent: true,
-            opacity: 0.3,
-            side: THREE.DoubleSide
-        });
-        
-        // Create multiple brain slices
-        for (let i = 0; i < 20; i++) {
-            const slice = new THREE.Mesh(sliceGeometry, sliceMaterial.clone());
-            slice.position.z = -1 + (i / 20) * 2;
-            slice.material.map = this.generateMRISliceTexture(i);
-            brainGroup.add(slice);
+        const videoIndex = videoMap[wave] || 0;
+        if (this.videos[videoIndex]) {
+            const subjectVideo = document.getElementById('subject-video');
+            subjectVideo.src = this.videos[videoIndex].src;
+            subjectVideo.play().catch(e => console.log('Video switch failed'));
         }
     }
 
-    createAdvancedBrainGeometry() {
-        const brainGeometry = new THREE.SphereGeometry(1, 128, 64);
-        const positions = brainGeometry.attributes.position;
-        
-        // Advanced brain deformation based on real anatomy
-        for (let i = 0; i < positions.count; i++) {
-            const x = positions.getX(i);
-            const y = positions.getY(i);
-            const z = positions.getZ(i);
-            
-            // Multiple deformation factors for realistic shape
-            const frontFactor = z > 0.3 ? 1.3 - 0.4 * Math.abs(y) : 1.0;
-            const temporalFactor = Math.abs(x) > 0.6 && y < 0.2 && y > -0.8 ? 1.4 : 1.0;
-            const occipitalFactor = z < -0.3 ? 0.7 + 0.3 * Math.abs(y) : 1.0;
-            const topFactor = y > 0.7 ? 0.85 : 1.0;
-            
-            // Cortical folding simulation
-            const noise = (Math.sin(x * 10) + Math.sin(y * 10) + Math.sin(z * 10)) * 0.02;
-            
-            const deformFactor = frontFactor * temporalFactor * occipitalFactor * topFactor;
-            
-            positions.setXYZ(i, 
-                x * deformFactor * 0.9 + noise,
-                y * deformFactor * 1.1 + noise,
-                z * deformFactor * 1.2 + noise
-            );
-        }
-        
-        brainGeometry.attributes.position.needsUpdate = true;
-        brainGeometry.computeVertexNormals();
-        
-        return brainGeometry;
-    }
-
-    addAdvancedAnatomicalStructures(brainGroup) {
-        // Cerebellum with detailed folding
-        const cerebellumGeometry = new THREE.SphereGeometry(0.35, 32, 16);
-        const cerebellumMaterial = new THREE.MeshPhysicalMaterial({
-            color: 0xb8956f,
-            roughness: 0.9,
-            metalness: 0.05
-        });
-        
-        const cerebellum = new THREE.Mesh(cerebellumGeometry, cerebellumMaterial);
-        cerebellum.scale.set(1.3, 0.7, 1.1);
-        cerebellum.position.set(0, -0.8, -0.9);
-        cerebellum.castShadow = true;
-        brainGroup.add(cerebellum);
-        
-        // Brain stem components
-        this.addBrainStemComponents(brainGroup);
-        
-        // Ventricular system
-        this.addVentricularSystem(brainGroup);
-        
-        // White matter tracts
-        this.addWhiteMatterTracts(brainGroup);
-    }
-
-    addBrainStemComponents(brainGroup) {
-        // Midbrain
-        const midbrainGeometry = new THREE.CylinderGeometry(0.12, 0.15, 0.25, 16);
-        const stemMaterial = new THREE.MeshPhysicalMaterial({ color: 0xa08570, roughness: 0.8 });
-        
-        const midbrain = new THREE.Mesh(midbrainGeometry, stemMaterial);
-        midbrain.position.set(0, -0.45, -0.35);
-        midbrain.castShadow = true;
-        brainGroup.add(midbrain);
-        
-        // Pons
-        const ponsGeometry = new THREE.CylinderGeometry(0.15, 0.18, 0.2, 16);
-        const pons = new THREE.Mesh(ponsGeometry, stemMaterial.clone());
-        pons.position.set(0, -0.65, -0.45);
-        pons.castShadow = true;
-        brainGroup.add(pons);
-        
-        // Medulla
-        const medullaGeometry = new THREE.CylinderGeometry(0.1, 0.15, 0.35, 12);
-        const medulla = new THREE.Mesh(medullaGeometry, stemMaterial.clone());
-        medulla.position.set(0, -0.9, -0.55);
-        medulla.castShadow = true;
-        brainGroup.add(medulla);
-    }
-
-    addVentricularSystem(brainGroup) {
-        // Lateral ventricles
-        const ventricleGeometry = new THREE.BoxGeometry(0.6, 0.1, 0.8);
-        const ventricleMaterial = new THREE.MeshPhysicalMaterial({
-            color: 0x87ceeb,
-            transparent: true,
-            opacity: 0.3,
-            transmission: 0.9,
-            ior: 1.33
-        });
-        
-        const leftVentricle = new THREE.Mesh(ventricleGeometry, ventricleMaterial);
-        leftVentricle.position.set(-0.3, 0.2, 0);
-        brainGroup.add(leftVentricle);
-        
-        const rightVentricle = new THREE.Mesh(ventricleGeometry, ventricleMaterial.clone());
-        rightVentricle.position.set(0.3, 0.2, 0);
-        brainGroup.add(rightVentricle);
-    }
-
-    addWhiteMatterTracts(brainGroup) {
-        // Corpus callosum
-        const callosumGeometry = new THREE.BoxGeometry(0.02, 1.4, 0.6);
-        const whiteMatterMaterial = new THREE.MeshPhysicalMaterial({
-            color: 0xf5f5dc,
-            metalness: 0.1,
-            roughness: 0.7
-        });
-        
-        const corpusCallosum = new THREE.Mesh(callosumGeometry, whiteMatterMaterial);
-        corpusCallosum.position.set(0, 0.1, -0.1);
-        brainGroup.add(corpusCallosum);
-        
-        // Add fiber tracts
-        this.addFiberTracts(brainGroup);
-    }
-
-    addFiberTracts(brainGroup) {
-        const fiberMaterial = new THREE.MeshPhysicalMaterial({
-            color: 0xffffff,
-            transparent: true,
-            opacity: 0.2,
-            metalness: 0.3,
-            roughness: 0.7
-        });
-        
-        // Create curved fiber paths
-        for (let i = 0; i < 50; i++) {
-            const curve = new THREE.CatmullRomCurve3([
-                new THREE.Vector3(-0.8 + Math.random() * 1.6, -0.5, -0.5),
-                new THREE.Vector3(-0.4 + Math.random() * 0.8, 0, 0),
-                new THREE.Vector3(-0.8 + Math.random() * 1.6, 0.5, 0.5)
-            ]);
-            
-            const tubeGeometry = new THREE.TubeGeometry(curve, 20, 0.005, 8, false);
-            const fiber = new THREE.Mesh(tubeGeometry, fiberMaterial.clone());
-            brainGroup.add(fiber);
-        }
-    }
-
-    createElectrodes() {
-        Object.entries(this.electrodePositions).forEach(([name, position]) => {
-            const electrodeGroup = new THREE.Group();
-            
-            // Advanced electrode design
-            const contactGeometry = new THREE.SphereGeometry(0.02, 16, 16);
-            const contactMaterial = new THREE.MeshPhysicalMaterial({
-                color: 0xc0c0c0,
-                metalness: 0.9,
-                roughness: 0.1,
-                clearcoat: 1.0,
-                emissive: 0x001122
-            });
-            
-            const contact = new THREE.Mesh(contactGeometry, contactMaterial);
-            contact.castShadow = true;
-            electrodeGroup.add(contact);
-            
-            // Electrode wire
-            const wireGeometry = new THREE.CylinderGeometry(0.002, 0.002, 0.3, 8);
-            const wireMaterial = new THREE.MeshPhysicalMaterial({
-                color: 0x333333,
-                metalness: 0.8,
-                roughness: 0.2
-            });
-            
-            const wire = new THREE.Mesh(wireGeometry, wireMaterial);
-            wire.position.y = -0.15;
-            electrodeGroup.add(wire);
-            
-            // Position and orient electrode
-            electrodeGroup.position.set(...position);
-            
-            const brainCenter = new THREE.Vector3(0, 0, 0);
-            const electrodePos = new THREE.Vector3(...position);
-            const direction = brainCenter.sub(electrodePos).normalize();
-            electrodeGroup.lookAt(direction.multiplyScalar(-1).add(electrodePos));
-            
-            electrodeGroup.userData = { 
-                type: 'electrode', 
-                name: name,
-                contact: contact,
-                activity: 0,
-                frequency: 0,
-                amplitude: 0
-            };
-            
-            // Add advanced electrode label
-            this.addAdvancedElectrodeLabel(electrodeGroup, name);
-            
-            this.electrodes.push(electrodeGroup);
-            this.brain.add(electrodeGroup);
-        });
-        
-        this.setupAdvancedElectrodeInteraction();
-    }
-
-    addAdvancedElectrodeLabel(electrode, name) {
-        // Create high-resolution label canvas
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        canvas.width = 128;
-        canvas.height = 64;
-        
-        // Draw label with medical styling
-        context.fillStyle = 'rgba(0, 20, 40, 0.9)';
-        context.fillRect(0, 0, 128, 64);
-        context.strokeStyle = '#00d4aa';
-        context.lineWidth = 2;
-        context.strokeRect(2, 2, 124, 60);
-        
-        context.fillStyle = '#ffffff';
-        context.font = 'bold 24px Arial';
-        context.textAlign = 'center';
-        context.fillText(name, 64, 42);
-        
-        const texture = new THREE.CanvasTexture(canvas);
-        const labelMaterial = new THREE.SpriteMaterial({ 
-            map: texture,
-            transparent: true,
-            alphaTest: 0.1
-        });
-        
-        const label = new THREE.Sprite(labelMaterial);
-        label.scale.set(0.3, 0.15, 1);
-        label.position.copy(electrode.position);
-        label.position.y += 0.15;
-        
-        this.brain.add(label);
-    }
-
-    setupAdvancedElectrodeInteraction() {
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
-        
-        this.renderer.domElement.addEventListener('mousemove', (event) => {
-            const rect = this.renderer.domElement.getBoundingClientRect();
-            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-            
-            raycaster.setFromCamera(mouse, this.camera);
-            const intersects = raycaster.intersectObjects(
-                this.electrodes.map(e => e.children[0])
-            );
-            
-            // Reset all electrodes
-            this.electrodes.forEach(electrode => {
-                const contact = electrode.userData.contact;
-                contact.material.emissive.setHex(0x001122);
-                contact.scale.setScalar(1);
-            });
-            
-            if (intersects.length > 0) {
-                const electrode = intersects[0].object.parent;
-                const contact = electrode.userData.contact;
-                contact.material.emissive.setHex(0x004444);
-                contact.scale.setScalar(1.3);
-                
-                this.showAdvancedElectrodeTooltip(electrode, event);
-            } else {
-                this.hideElectrodeTooltip();
-            }
-        });
-    }
-
-    showAdvancedElectrodeTooltip(electrode, event) {
-        const tooltip = document.getElementById('electrode-tooltip');
-        const data = electrode.userData;
-        
-        // Update tooltip content with real-time data
-        tooltip.querySelector('.electrode-name').textContent = data.name;
-        tooltip.querySelector('.tooltip-content .metric:nth-child(1) .value').textContent = 
-            `${(data.amplitude * 100 + Math.random() * 50).toFixed(1)} μV`;
-        tooltip.querySelector('.tooltip-content .metric:nth-child(2) .value').textContent = 
-            `${(data.frequency + Math.random() * 5).toFixed(1)} Hz`;
-        
-        const activityLevel = data.activity > 0.7 ? 'High' : data.activity > 0.4 ? 'Medium' : 'Low';
-        tooltip.querySelector('.tooltip-content .metric:nth-child(3) .value').textContent = activityLevel;
-        
-        // Position tooltip
-        tooltip.style.left = event.clientX + 'px';
-        tooltip.style.top = (event.clientY - tooltip.offsetHeight - 10) + 'px';
-        tooltip.classList.add('visible');
-    }
-
-    hideElectrodeTooltip() {
-        document.getElementById('electrode-tooltip').classList.remove('visible');
-    }
-
-    setupElectrodeGrid() {
-        const electrodeGrid = document.getElementById('electrode-grid');
-        
-        Object.keys(this.electrodePositions).forEach(name => {
-            const electrodeStatus = document.createElement('div');
-            electrodeStatus.className = 'electrode-status active';
-            electrodeStatus.textContent = name;
-            electrodeStatus.dataset.electrode = name;
-            
-            electrodeStatus.addEventListener('click', () => {
-                this.focusOnElectrode(name);
-            });
-            
-            electrodeGrid.appendChild(electrodeStatus);
-        });
-    }
-
-    setupConnectivityMatrix() {
-        const matrix = document.getElementById('connectivity-matrix');
-        const canvas = document.createElement('canvas');
-        canvas.width = matrix.offsetWidth;
-        canvas.height = matrix.offsetHeight;
-        matrix.appendChild(canvas);
-        
-        this.connectivityCanvas = canvas;
-        this.connectivityCtx = canvas.getContext('2d');
-        this.updateConnectivityMatrix();
-    }
-
-    updateConnectivityMatrix() {
-        if (!this.connectivityCtx) return;
-        
-        const ctx = this.connectivityCtx;
-        const width = this.connectivityCanvas.width;
-        const height = this.connectivityCanvas.height;
-        
-        ctx.clearRect(0, 0, width, height);
-        
-        const electrodeCount = Object.keys(this.electrodePositions).length;
-        const cellWidth = width / electrodeCount;
-        const cellHeight = height / electrodeCount;
-        
-        // Draw connectivity matrix
-        for (let i = 0; i < electrodeCount; i++) {
-            for (let j = 0; j < electrodeCount; j++) {
-                const connectivity = Math.random(); // Replace with real connectivity data
-                const color = `hsl(${connectivity * 240}, 100%, 50%)`;
-                
-                ctx.fillStyle = color;
-                ctx.globalAlpha = connectivity;
-                ctx.fillRect(i * cellWidth, j * cellHeight, cellWidth, cellHeight);
-            }
-        }
-        
-        ctx.globalAlpha = 1;
-    }
-
-    setupVideoBackgrounds() {
-        const videos = document.querySelectorAll('.brain-video');
-        videos.forEach((video, index) => {
-            video.addEventListener('loadeddata', () => {
-                console.log(`Video ${index + 1} loaded`);
-            });
-            
-            video.addEventListener('error', (e) => {
-                console.warn(`Video ${index + 1} failed to load:`, e);
-            });
-        });
-        
-        // Set initial video
-        this.setActiveVideo(1);
-    }
-
-    setActiveVideo(videoIndex) {
-        document.querySelectorAll('.brain-video').forEach((video, index) => {
-            video.classList.remove('active');
-            video.pause();
-        });
-        
-        const activeVideo = document.getElementById(`brain-video-${videoIndex}`);
-        if (activeVideo) {
-            activeVideo.classList.add('active');
-            activeVideo.currentTime = 0;
-            activeVideo.play().catch(e => console.warn('Video autoplay failed:', e));
-            this.currentVideo = activeVideo;
-        }
-    }
-
-    startRealTimeAnalysis() {
-        setInterval(() => {
-            this.updateRealTimeMetrics();
-            this.updateConnectivityMatrix();
-            this.updateBrainRegionActivity();
-        }, 100);
-    }
-
-    updateRealTimeMetrics() {
-        // Simulate real-time EEG analysis
-        this.metrics.alphaPower = 5 + Math.sin(Date.now() * 0.001) * 3 + Math.random();
-        this.metrics.betaPower = 4 + Math.cos(Date.now() * 0.0015) * 2 + Math.random();
-        this.metrics.thetaPower = 3 + Math.sin(Date.now() * 0.0008) * 2 + Math.random();
-        this.metrics.gammaPower = 7 + Math.cos(Date.now() * 0.002) * 4 + Math.random();
-        
-        // Update UI
-        document.getElementById('alpha-power').textContent = this.metrics.alphaPower.toFixed(1);
-        document.getElementById('beta-power').textContent = this.metrics.betaPower.toFixed(1);
-        document.getElementById('theta-power').textContent = this.metrics.thetaPower.toFixed(1);
-        document.getElementById('gamma-power').textContent = this.metrics.gammaPower.toFixed(1);
-        
-        // Update progress bars
-        document.querySelector('.alpha-fill').style.width = `${(this.metrics.alphaPower / 10) * 100}%`;
-        document.querySelector('.beta-fill').style.width = `${(this.metrics.betaPower / 10) * 100}%`;
-        document.querySelector('.theta-fill').style.width = `${(this.metrics.thetaPower / 10) * 100}%`;
-        document.querySelector('.gamma-fill').style.width = `${(this.metrics.gammaPower / 10) * 100}%`;
-    }
-
-    updateBrainRegionActivity() {
-        // Update brain region activity percentages
-        const regions = document.querySelectorAll('.region-activity');
-        regions.forEach(region => {
-            const activity = 30 + Math.random() * 70;
-            region.textContent = `${activity.toFixed(0)}%`;
-        });
-    }
-
-    // Control Functions
     async loadEEGData() {
-        const btn = document.getElementById('load-data-btn');
+        const btn = document.getElementById('load-btn');
+        const originalHTML = btn.innerHTML;
+        
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
         btn.disabled = true;
         
@@ -833,22 +374,21 @@ class AdvancedBrainVisualizer {
             // Update timeline
             document.getElementById('timeline-slider').max = this.maxTime;
             
-            // Enable controls
-            document.getElementById('play-pause-btn').disabled = false;
-            
-            // Start visualization
-            this.updateVisualization();
-            
+            // Show success
             btn.innerHTML = '<i class="fas fa-check"></i> Data Loaded';
+            
             setTimeout(() => {
-                btn.innerHTML = '<i class="fas fa-upload"></i> Load EEG Data';
+                btn.innerHTML = originalHTML;
                 btn.disabled = false;
             }, 2000);
             
         } catch (error) {
             console.error('Error loading data:', error);
-            btn.innerHTML = '<i class="fas fa-exclamation"></i> Error';
-            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error';
+            setTimeout(() => {
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+            }, 2000);
         }
     }
 
@@ -871,21 +411,23 @@ class AdvancedBrainVisualizer {
     }
 
     togglePlayback() {
-        const btn = document.getElementById('play-pause-btn');
+        const btn = document.getElementById('play-btn');
         
         if (this.isPlaying) {
             this.isPlaying = false;
-            btn.innerHTML = '<i class="fas fa-play"></i> Play';
-            cancelAnimationFrame(this.playAnimation);
+            btn.innerHTML = '<i class="fas fa-play"></i>';
+            if (this.playAnimation) {
+                cancelAnimationFrame(this.playAnimation);
+            }
         } else {
             this.isPlaying = true;
-            btn.innerHTML = '<i class="fas fa-pause"></i> Pause';
+            btn.innerHTML = '<i class="fas fa-pause"></i>';
             this.startPlayback();
         }
     }
 
     startPlayback() {
-        const playSpeed = 50 / this.settings.animationSpeed;
+        const playSpeed = 100; // milliseconds between updates
         let lastTime = Date.now();
         
         const playLoop = () => {
@@ -893,7 +435,7 @@ class AdvancedBrainVisualizer {
             
             const currentTime = Date.now();
             if (currentTime - lastTime >= playSpeed) {
-                this.currentTimeIndex = (this.currentTimeIndex + 1) % (this.maxTime + 1);
+                this.currentTimeIndex = (this.currentTimeIndex + 1) % 120; // 2 minute loop
                 
                 document.getElementById('timeline-slider').value = this.currentTimeIndex;
                 this.updateTimePosition(this.currentTimeIndex);
@@ -907,290 +449,420 @@ class AdvancedBrainVisualizer {
         playLoop();
     }
 
-    toggleRecording() {
-        const btn = document.getElementById('record-btn');
-        
-        if (this.isRecording) {
-            this.isRecording = false;
-            btn.innerHTML = '<i class="fas fa-record-vinyl"></i> Record';
-            btn.classList.remove('recording');
-        } else {
-            this.isRecording = true;
-            btn.innerHTML = '<i class="fas fa-stop"></i> Stop Recording';
-            btn.classList.add('recording');
-        }
-    }
-
-    exportData() {
-        const data = {
-            timestamp: new Date().toISOString(),
-            metrics: this.metrics,
-            electrodeData: this.electrodes.map(e => ({
-                name: e.userData.name,
-                activity: e.userData.activity,
-                position: e.position.toArray()
-            }))
-        };
-        
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `brain-analysis-${Date.now()}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-    }
-
-    changeBrainMode(mode) {
-        this.currentMode = mode;
-        
-        // Switch video based on mode
-        switch (mode) {
-            case 'medical-3d':
-                this.setActiveVideo(1);
-                break;
-            case 'neural-network':
-                this.setActiveVideo(2);
-                break;
-            case 'activation-map':
-                this.setActiveVideo(3);
-                break;
-            case 'anatomical':
-                this.setActiveVideo(4);
-                break;
-            case 'mri-simulation':
-                this.setActiveVideo(5);
-                break;
-        }
-        
-        // Recreate brain model
-        if (this.brain) {
-            this.scene.remove(this.brain);
-        }
-        this.createAdvancedBrainModel();
-        this.createElectrodes();
-    }
-
-    changeAnalysisMode(mode) {
-        this.analysisMode = mode;
-        console.log(`Analysis mode changed to: ${mode}`);
-    }
-
-    setFrequencyFilter(freq) {
-        // Update active frequency button
-        document.querySelectorAll('.freq-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        document.querySelector(`[data-freq="${freq}"]`).classList.add('active');
-        
-        this.frequencyFilter = freq;
-        this.updateVisualization();
-    }
-
     updateTimePosition(value) {
         this.currentTimeIndex = parseInt(value);
-        const timeInSeconds = (this.currentTimeIndex * 0.01).toFixed(1);
-        document.getElementById('time-display').textContent = `${timeInSeconds}s`;
+        const minutes = Math.floor(this.currentTimeIndex / 60);
+        const seconds = this.currentTimeIndex % 60;
+        document.getElementById('time-display').textContent = 
+            `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         
-        this.updateVisualization();
+        // Check for annotations at current time
+        this.checkAnnotations();
     }
 
-    updateVisualization() {
-        if (!this.data) return;
+    checkAnnotations() {
+        const currentAnnotation = this.metrics.annotations.find(
+            ann => Math.abs(ann.time - this.currentTimeIndex) < 1
+        );
         
-        const currentRow = this.data.data[this.currentTimeIndex] || this.data.data[0];
+        if (currentAnnotation) {
+            this.showAnnotationAlert(currentAnnotation);
+        }
+    }
+
+    showAnnotationAlert(annotation) {
+        // Create annotation popup
+        const annotationDiv = document.createElement('div');
+        annotationDiv.className = `annotation-marker ${annotation.type}`;
+        annotationDiv.textContent = annotation.text;
+        annotationDiv.style.left = `${Math.random() * 60 + 20}%`;
+        annotationDiv.style.top = `${Math.random() * 40 + 30}%`;
         
-        // Update electrode activities with frequency filtering
-        this.electrodes.forEach(electrode => {
-            const electrodeName = electrode.userData.name;
-            let activity = currentRow[electrodeName] || Math.random() * 0.5;
-            
-            // Apply frequency filter
-            if (this.frequencyFilter !== 'all') {
-                activity = this.applyFrequencyFilter(activity, this.frequencyFilter);
+        const annotationsContainer = document.getElementById('wave-annotations');
+        annotationsContainer.appendChild(annotationDiv);
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            if (annotationDiv.parentNode) {
+                annotationDiv.parentNode.removeChild(annotationDiv);
             }
-            
-            electrode.userData.activity = Math.abs(activity);
-            electrode.userData.amplitude = Math.abs(activity) * 100;
-            electrode.userData.frequency = 8 + Math.random() * 20;
-            
-            const contact = electrode.userData.contact;
-            if (contact) {
-                const intensity = Math.min(Math.abs(activity) * 2, 1);
-                const color = new THREE.Color();
-                
-                // Advanced color mapping
-                if (intensity < 0.3) {
-                    color.setHSL(0.67, 0.8, 0.3 + intensity * 0.7);
-                } else if (intensity < 0.7) {
-                    color.setHSL(0.17, 0.9, 0.4 + intensity * 0.6);
-                } else {
-                    color.setHSL(0.0, 0.9, 0.5 + intensity * 0.5);
-                }
-                
-                contact.material.color = color;
-                contact.material.emissive.copy(color).multiplyScalar(0.3);
-                
-                const scale = 1.0 + intensity * 0.5;
-                contact.scale.setScalar(scale);
+        }, 3000);
+    }
+
+    highlightREM() {
+        // Switch to REM visualization
+        this.setActiveWave('gamma');
+        
+        // Add REM highlight effect
+        const btn = document.getElementById('rem-highlight-btn');
+        btn.style.background = 'linear-gradient(135deg, #FFA8CC, #C8A8E9)';
+        btn.style.transform = 'scale(1.05)';
+        
+        // Simulate REM sleep stage
+        this.updateSleepStage('REM');
+        
+        setTimeout(() => {
+            btn.style.background = '';
+            btn.style.transform = '';
+        }, 2000);
+    }
+
+    updateSleepStage(stage) {
+        const stageIcon = document.querySelector('.stage-icon');
+        const stageInfo = document.querySelector('.stage-info h4');
+        const stageDesc = document.querySelector('.stage-info p');
+        
+        const stageData = {
+            'REM': {
+                icon: 'fas fa-cloud',
+                title: 'REM Sleep',
+                description: 'Dreaming & Memory consolidation',
+                color: 'linear-gradient(135deg, #FFA8CC, #C8A8E9)'
+            },
+            'NREM-1': {
+                icon: 'fas fa-eye-slash',
+                title: 'NREM Stage 1',
+                description: 'Light sleep, drowsiness',
+                color: 'linear-gradient(135deg, #A8D8EA, #A8E6CF)'
+            },
+            'NREM-2': {
+                icon: 'fas fa-moon',
+                title: 'NREM Stage 2',
+                description: 'True sleep begins',
+                color: 'linear-gradient(135deg, #C8A8E9, #A8D8EA)'
+            },
+            'NREM-3': {
+                icon: 'fas fa-bed',
+                title: 'NREM Stage 3',
+                description: 'Deep sleep, restoration',
+                color: 'linear-gradient(135deg, #A8D8EA, #C8A8E9)'
             }
+        };
+        
+        const data = stageData[stage];
+        if (data) {
+            stageIcon.innerHTML = `<i class="${data.icon}"></i>`;
+            stageIcon.style.background = data.color;
+            stageInfo.textContent = data.title;
+            stageDesc.textContent = data.description;
+        }
+    }
+
+    simulateBlinkDetection() {
+        setInterval(() => {
+            if (Math.random() > 0.7) { // 30% chance every 3 seconds
+                this.showBlinkIndicator();
+            }
+        }, 3000);
+    }
+
+    showBlinkIndicator() {
+        const indicator = document.getElementById('blink-indicator');
+        indicator.classList.add('show');
+        
+        setTimeout(() => {
+            indicator.classList.remove('show');
+        }, 1500);
+    }
+
+    switchTab(tabName) {
+        // Update navigation
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+        
+        // Hide all tab contents
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.style.display = 'none';
         });
         
-        // Update shader uniforms if using activation map
-        if (this.activationMaterial) {
-            this.activationMaterial.uniforms.time.value = Date.now() * 0.001;
+        // Show selected tab
+        if (tabName === 'home') {
+            // Home tab is the main dashboard, so hide tab contents
+            document.querySelector('.main-dashboard').style.display = 'grid';
+        } else {
+            document.querySelector('.main-dashboard').style.display = 'none';
+            document.getElementById(`${tabName}-content`).style.display = 'block';
+        }
+        
+        this.currentTab = tabName;
+        
+        // Initialize charts for the new tab
+        if (tabName === 'brain') {
+            this.setupRegionCharts();
+        } else if (tabName === 'sleep') {
+            this.setupSleepStageWaves();
         }
     }
 
-    applyFrequencyFilter(activity, filter) {
-        // Simulate frequency filtering
-        const filterMap = {
-            'alpha': activity * (0.8 + Math.sin(Date.now() * 0.01) * 0.2),
-            'beta': activity * (0.6 + Math.cos(Date.now() * 0.015) * 0.4),
-            'gamma': activity * (0.9 + Math.sin(Date.now() * 0.02) * 0.1)
-        };
+    setupRegionCharts() {
+        const regions = ['frontal', 'parietal', 'temporal', 'occipital'];
         
-        return filterMap[filter] || activity;
+        regions.forEach(region => {
+            const canvas = document.getElementById(`${region}-chart`);
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * devicePixelRatio;
+            canvas.height = rect.height * devicePixelRatio;
+            ctx.scale(devicePixelRatio, devicePixelRatio);
+            
+            this.drawRegionChart(ctx, canvas.offsetWidth, canvas.offsetHeight, region);
+        });
     }
 
-    updateOpacity(value) {
-        this.settings.opacity = value / 100;
-        if (this.brain) {
-            this.brain.children.forEach(child => {
-                if (child.material && child.material.opacity !== undefined) {
-                    child.material.opacity = this.settings.opacity;
+    drawRegionChart(ctx, width, height, region) {
+        ctx.clearRect(0, 0, width, height);
+        
+        // Get region color
+        const colors = {
+            frontal: this.waveColors.delta,
+            parietal: this.waveColors.theta,
+            temporal: this.waveColors.beta,
+            occipital: this.waveColors.gamma
+        };
+        
+        const color = colors[region];
+        
+        // Draw wave for this region
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        
+        const time = Date.now() * 0.001;
+        const frequency = 6 + Math.random() * 8;
+        const amplitude = height * 0.3;
+        const centerY = height / 2;
+        
+        for (let i = 0; i < width; i++) {
+            const x = i;
+            const phase = (i / width) * frequency * Math.PI * 2 + time;
+            const noise = (Math.random() - 0.5) * 0.1;
+            const y = centerY + Math.sin(phase) * amplitude + noise * amplitude;
+            
+            if (i === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        }
+        
+        ctx.stroke();
+        
+        // Add glow
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 5;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+    }
+
+    setupSleepStageWaves() {
+        const stages = ['nrem1', 'nrem2', 'nrem3', 'rem'];
+        
+        stages.forEach(stage => {
+            const canvas = document.getElementById(`${stage}-wave`);
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * devicePixelRatio;
+            canvas.height = rect.height * devicePixelRatio;
+            ctx.scale(devicePixelRatio, devicePixelRatio);
+            
+            this.drawStageWave(ctx, canvas.offsetWidth, canvas.offsetHeight, stage);
+        });
+    }
+
+    drawStageWave(ctx, width, height, stage) {
+        ctx.clearRect(0, 0, width, height);
+        
+        const stageProperties = {
+            nrem1: { freq: 8, amp: 0.3, color: this.waveColors.alpha },
+            nrem2: { freq: 12, amp: 0.4, color: this.waveColors.theta },
+            nrem3: { freq: 2, amp: 0.8, color: this.waveColors.delta },
+            rem: { freq: 20, amp: 0.2, color: this.waveColors.gamma }
+        };
+        
+        const props = stageProperties[stage];
+        
+        ctx.strokeStyle = props.color;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        
+        const time = Date.now() * 0.001;
+        const amplitude = height * props.amp;
+        const centerY = height / 2;
+        
+        for (let i = 0; i < width; i++) {
+            const x = i;
+            const phase = (i / width) * props.freq * Math.PI * 2 + time;
+            const noise = (Math.random() - 0.5) * 0.05;
+            const y = centerY + Math.sin(phase) * amplitude + noise * amplitude;
+            
+            if (i === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        }
+        
+        ctx.stroke();
+    }
+
+    uploadProfilePicture() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        
+        input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const profilePic = document.getElementById('profile-pic');
+                    profilePic.style.backgroundImage = `url(${e.target.result})`;
+                    profilePic.style.backgroundSize = 'cover';
+                    profilePic.innerHTML = '';
+                    
+                    // Save to localStorage
+                    localStorage.setItem('eeg-profile-pic', e.target.result);
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+        
+        input.click();
+    }
+
+    loadSavedSettings() {
+        // Load profile picture
+        const savedPic = localStorage.getItem('eeg-profile-pic');
+        if (savedPic) {
+            const profilePic = document.getElementById('profile-pic');
+            profilePic.style.backgroundImage = `url(${savedPic})`;
+            profilePic.style.backgroundSize = 'cover';
+            profilePic.innerHTML = '';
+        }
+        
+        // Load other settings
+        const savedTheme = localStorage.getItem('eeg-theme');
+        if (savedTheme) {
+            document.body.className = savedTheme;
+        }
+    }
+
+    startRealTimeUpdates() {
+        setInterval(() => {
+            // Update brain activity metrics
+            Object.keys(this.metrics.brainActivity).forEach(region => {
+                const activity = 40 + Math.random() * 50;
+                this.metrics.brainActivity[region] = Math.round(activity);
+                
+                // Update UI
+                const activityElement = document.querySelector(`.${region}-region .metric-value`);
+                if (activityElement) {
+                    activityElement.textContent = `${activity.toFixed(0)}%`;
                 }
             });
-        }
-    }
-
-    updateSensitivity(value) {
-        this.settings.sensitivity = value;
-    }
-
-    updateSpeed(value) {
-        this.settings.animationSpeed = parseFloat(value);
-    }
-
-    focusOnElectrode(electrodeName) {
-        const electrode = this.electrodes.find(e => e.userData.name === electrodeName);
-        if (electrode) {
-            this.animateCamera(electrode.position);
             
-            // Highlight electrode
-            const contact = electrode.userData.contact;
-            contact.material.emissive.setHex(0x006666);
-            setTimeout(() => {
-                contact.material.emissive.setHex(0x001122);
-            }, 2000);
-        }
+            // Update sleep cycle progress
+            const progress = (this.currentTimeIndex / 120) * 100;
+            document.querySelector('.progress-fill').style.width = `${progress}%`;
+            
+            // Update stage timer
+            this.metrics.stageTimer++;
+            const minutes = Math.floor(this.metrics.stageTimer / 60);
+            const seconds = this.metrics.stageTimer % 60;
+            document.querySelector('.stage-timer').textContent = 
+                `Duration: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+                
+        }, 1000);
     }
 
-    focusOnRegion(regionName) {
-        // Define region center positions
-        const regionPositions = {
-            'frontal': new THREE.Vector3(0, 0.4, 0.8),
-            'parietal': new THREE.Vector3(0, 0.3, -0.3),
-            'temporal': new THREE.Vector3(-0.7, -0.1, 0.2),
-            'occipital': new THREE.Vector3(0, -0.5, -0.8)
+    showTooltip(annotation, element) {
+        const tooltip = document.getElementById('spike-tooltip');
+        const rect = element.getBoundingClientRect();
+        
+        tooltip.querySelector('h4').textContent = annotation.text;
+        tooltip.querySelector('p').textContent = 'Detected brain activity spike';
+        tooltip.querySelector('.tooltip-time').textContent = `${Math.floor(annotation.time / 60)}:${(annotation.time % 60).toString().padStart(2, '0')}`;
+        
+        tooltip.style.left = rect.left + 'px';
+        tooltip.style.top = (rect.top - tooltip.offsetHeight - 10) + 'px';
+        tooltip.classList.add('show');
+        
+        setTimeout(() => {
+            tooltip.classList.remove('show');
+        }, 3000);
+    }
+
+    focusOnRegion(regionCard) {
+        // Add focus animation
+        regionCard.style.transform = 'translateY(-8px) scale(1.02)';
+        regionCard.style.boxShadow = '0 12px 40px rgba(0, 0, 0, 0.15)';
+        
+        setTimeout(() => {
+            regionCard.style.transform = '';
+            regionCard.style.boxShadow = '';
+        }, 1000);
+        
+        // Update charts for this region
+        const regionName = regionCard.className.split(' ')[1].replace('-region', '');
+        this.highlightRegionActivity(regionName);
+    }
+
+    highlightRegionActivity(regionName) {
+        // Switch to wave type associated with this region
+        const regionWaves = {
+            'frontal': 'beta',
+            'parietal': 'alpha',
+            'temporal': 'theta',
+            'occipital': 'gamma'
         };
         
-        const position = regionPositions[regionName];
-        if (position) {
-            this.animateCamera(position);
+        const waveType = regionWaves[regionName];
+        if (waveType) {
+            this.setActiveWave(waveType);
         }
     }
 
-    animateCamera(targetPosition) {
-        const startPosition = this.camera.position.clone();
-        const endPosition = targetPosition.clone().add(new THREE.Vector3(0, 0, 3));
-        const duration = 1500;
-        const startTime = Date.now();
+    showStageDetails(stageCard) {
+        // Add selection animation
+        document.querySelectorAll('.sleep-stage-card').forEach(card => {
+            card.classList.remove('active');
+        });
+        stageCard.classList.add('active');
         
-        const animate = () => {
-            const elapsed = Date.now() - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            const easeProgress = 1 - Math.pow(1 - progress, 3);
-            
-            this.camera.position.lerpVectors(startPosition, endPosition, easeProgress);
-            this.camera.lookAt(targetPosition);
-            
-            if (progress < 1) {
-                requestAnimationFrame(animate);
-            }
-        };
-        
-        animate();
-    }
-
-    handleClick(event) {
-        // Handle 3D object clicking
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
-        
-        const rect = this.renderer.domElement.getBoundingClientRect();
-        mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-        
-        raycaster.setFromCamera(mouse, this.camera);
-        const intersects = raycaster.intersectObjects(this.brain.children, true);
-        
-        if (intersects.length > 0) {
-            const object = intersects[0].object;
-            console.log('Clicked on:', object.userData);
-        }
-    }
-
-    handleMouseMove(event) {
-        // Handle mouse movement for tooltips and highlights
-        this.setupAdvancedElectrodeInteraction();
-    }
-
-    updateViewMode() {
-        // Update view based on current mode
-        this.changeBrainMode(this.currentMode);
-    }
-
-    animate() {
-        requestAnimationFrame(() => this.animate());
-        
-        // Gentle brain rotation when not being controlled
-        if (this.brain && !this.isPlaying) {
-            this.brain.rotation.y += 0.002;
-        }
-        
-        // Update animations
-        if (this.currentVideo) {
-            // Sync 3D animations with video
-            const videoTime = this.currentVideo.currentTime;
-            if (this.brain) {
-                this.brain.rotation.z = Math.sin(videoTime) * 0.1;
-            }
-        }
-        
-        // Render scene
-        this.renderer.render(this.scene, this.camera);
-    }
-
-    onWindowResize() {
-        const container = document.getElementById('brain-canvas');
-        const width = container.clientWidth;
-        const height = container.clientHeight;
-        
-        this.camera.aspect = width / height;
-        this.camera.updateProjectionMatrix();
-        this.renderer.setSize(width, height);
-        
-        // Update connectivity matrix canvas
-        if (this.connectivityCanvas) {
-            this.connectivityCanvas.width = width;
-            this.connectivityCanvas.height = height;
-            this.updateConnectivityMatrix();
-        }
+        // Update main sleep stage display
+        const stageName = stageCard.querySelector('h3').textContent;
+        this.updateSleepStage(stageName.replace(' ', '-'));
     }
 }
 
-// Initialize the advanced brain visualization
+// Initialize the EEG Sleep Monitor
 document.addEventListener('DOMContentLoaded', () => {
-    new AdvancedBrainVisualizer();
+    new EEGSleepMonitor();
+});
+
+// Add some global animations and effects
+document.addEventListener('DOMContentLoaded', () => {
+    // Add smooth page transitions
+    document.body.style.opacity = '0';
+    setTimeout(() => {
+        document.body.style.transition = 'opacity 0.5s ease';
+        document.body.style.opacity = '1';
+    }, 100);
+    
+    // Add hover effects to cards
+    document.querySelectorAll('.region-card, .sleep-stage-card, .report-card').forEach(card => {
+        card.addEventListener('mouseenter', () => {
+            card.style.transform = 'translateY(-4px)';
+        });
+        
+        card.addEventListener('mouseleave', () => {
+            card.style.transform = '';
+        });
+    });
 });
