@@ -363,7 +363,7 @@ class InteractiveBrainVisualizer {
         brainGroup.add(cerebellum);
 
         // Add cerebellar folia (folds)
-        this.addCerebellarFolia(cerebellum);
+        this.addCerebellarFolia(brainGroup);
     }
 
     addCerebellarFolia(cerebellum) {
