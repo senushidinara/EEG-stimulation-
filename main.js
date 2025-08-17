@@ -462,28 +462,55 @@ class InteractiveBrainVisualizer {
 
     createElectrodes() {
         Object.entries(this.electrodePositions).forEach(([name, position]) => {
-            const electrodeGeometry = new THREE.SphereGeometry(0.03, 8, 8);
-            const electrodeMaterial = new THREE.MeshPhongMaterial({
-                color: 0x00ff00,
+            // Create more realistic electrode appearance
+            const electrodeGroup = new THREE.Group();
+
+            // Main electrode contact
+            const contactGeometry = new THREE.SphereGeometry(0.025, 12, 12);
+            const contactMaterial = new THREE.MeshPhongMaterial({
+                color: 0xc0c0c0, // Metallic silver
+                shininess: 100,
                 emissive: 0x002200
             });
-            
-            const electrode = new THREE.Mesh(electrodeGeometry, electrodeMaterial);
-            electrode.position.set(...position);
-            electrode.userData = { 
-                type: 'electrode', 
+
+            const contact = new THREE.Mesh(contactGeometry, contactMaterial);
+            electrodeGroup.add(contact);
+
+            // Electrode base/housing
+            const baseGeometry = new THREE.CylinderGeometry(0.02, 0.025, 0.01, 8);
+            const baseMaterial = new THREE.MeshPhongMaterial({
+                color: 0x333333, // Dark housing
+                shininess: 50
+            });
+
+            const base = new THREE.Mesh(baseGeometry, baseMaterial);
+            base.position.y = -0.015;
+            electrodeGroup.add(base);
+
+            // Position electrode on brain surface
+            electrodeGroup.position.set(...position);
+
+            // Point electrode normal toward brain center
+            const brainCenter = new THREE.Vector3(0, 0, 0);
+            const electrodePos = new THREE.Vector3(...position);
+            const direction = brainCenter.sub(electrodePos).normalize();
+            electrodeGroup.lookAt(direction.multiplyScalar(-1).add(electrodePos));
+
+            electrodeGroup.userData = {
+                type: 'electrode',
                 name: name,
-                originalColor: 0x00ff00,
-                activity: 0
+                originalColor: 0xc0c0c0,
+                activity: 0,
+                contact: contact // Reference to the contact for color changes
             };
-            
+
             // Add electrode label
-            this.addElectrodeLabel(electrode, name);
-            
-            this.electrodes.push(electrode);
-            this.brain.add(electrode);
+            this.addElectrodeLabel(electrodeGroup, name);
+
+            this.electrodes.push(electrodeGroup);
+            this.brain.add(electrodeGroup);
         });
-        
+
         // Add electrode interaction
         this.setupElectrodeInteraction();
     }
