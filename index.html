@@ -3,113 +3,281 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Brain Activation Visualization</title>
+    <title>Advanced Medical Brain Visualization</title>
     <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
     <div class="app-container">
+        <!-- Header with Advanced Controls -->
         <header class="header">
-            <h1 class="title">3D Interactive Brain Activation</h1>
-            <p class="subtitle">Real-time EEG visualization with 3D brain models</p>
+            <div class="header-content">
+                <div class="title-section">
+                    <h1 class="title">
+                        <i class="fas fa-brain"></i>
+                        Advanced Medical Brain Visualization
+                    </h1>
+                    <p class="subtitle">Real-time EEG • 3D Medical Imaging • Neural Activity Analysis</p>
+                </div>
+                
+                <div class="header-controls">
+                    <div class="status-indicators">
+                        <div class="status-item">
+                            <span class="status-dot recording"></span>
+                            <span>Recording</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-dot processing"></span>
+                            <span>Processing</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-dot online"></span>
+                            <span>Online</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </header>
-        
-        <main class="main-content">
-            <div class="controls-panel">
-                <div class="control-group">
-                    <label for="view-mode" class="control-label">View Mode:</label>
-                    <select id="view-mode" class="control-select">
-                        <option value="3d-brain">3D Brain Model</option>
-                        <option value="2d-chart">2D Time Series</option>
-                        <option value="split">Split View</option>
-                    </select>
-                </div>
-                
-                <div class="control-group">
-                    <label for="data-select" class="control-label">Data View:</label>
-                    <select id="data-select" class="control-select">
-                        <option value="all">All Channels</option>
-                        <option value="frontal">Frontal Lobe</option>
-                        <option value="parietal">Parietal Lobe</option>
-                        <option value="temporal">Temporal Lobe</option>
-                        <option value="occipital">Occipital Lobe</option>
-                    </select>
-                </div>
-                
-                <div class="control-group">
-                    <label for="time-slider" class="control-label">Time:</label>
-                    <input type="range" id="time-slider" class="time-slider" min="0" max="100" value="0">
-                    <span id="time-display" class="time-display">0ms</span>
-                </div>
-                
-                <div class="button-group">
-                    <button id="load-btn" class="action-button primary">Load EEG Data</button>
-                    <button id="play-btn" class="action-button secondary" disabled>▶ Play</button>
-                    <button id="reset-btn" class="action-button secondary">Reset View</button>
+
+        <!-- Advanced Control Panel -->
+        <div class="control-panel">
+            <div class="control-section">
+                <h3><i class="fas fa-sliders-h"></i> Visualization Controls</h3>
+                <div class="control-grid">
+                    <div class="control-group">
+                        <label>Brain View Mode</label>
+                        <select id="brain-mode" class="advanced-select">
+                            <option value="medical-3d">Medical 3D Scan</option>
+                            <option value="neural-network">Neural Network</option>
+                            <option value="activation-map">Activation Heatmap</option>
+                            <option value="anatomical">Anatomical Model</option>
+                            <option value="mri-simulation">MRI Simulation</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label>Data Analysis</label>
+                        <select id="analysis-mode" class="advanced-select">
+                            <option value="real-time">Real-time Analysis</option>
+                            <option value="frequency">Frequency Domain</option>
+                            <option value="connectivity">Connectivity Analysis</option>
+                            <option value="coherence">Coherence Mapping</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label>Neural Activity Filter</label>
+                        <div class="frequency-controls">
+                            <button class="freq-btn active" data-freq="all">All</button>
+                            <button class="freq-btn" data-freq="alpha">Alpha (8-12Hz)</button>
+                            <button class="freq-btn" data-freq="beta">Beta (13-30Hz)</button>
+                            <button class="freq-btn" data-freq="gamma">Gamma (30-100Hz)</button>
+                        </div>
+                    </div>
                 </div>
             </div>
             
-            <div class="visualization-container">
-                <div class="brain-3d-container" id="brain-3d-container">
-                    <div id="brain-3d" class="brain-3d-scene"></div>
-                    <div class="brain-overlay">
-                        <div class="electrode-info" id="electrode-info">
-                            <h4>Electrode Info</h4>
-                            <div id="electrode-details">Hover over electrodes for details</div>
-                        </div>
+            <div class="control-section">
+                <h3><i class="fas fa-play-circle"></i> Playback & Recording</h3>
+                <div class="playback-controls">
+                    <button id="load-data-btn" class="btn primary">
+                        <i class="fas fa-upload"></i> Load EEG Data
+                    </button>
+                    <button id="play-pause-btn" class="btn secondary" disabled>
+                        <i class="fas fa-play"></i> Play
+                    </button>
+                    <button id="record-btn" class="btn record">
+                        <i class="fas fa-record-vinyl"></i> Record
+                    </button>
+                    <button id="export-btn" class="btn tertiary">
+                        <i class="fas fa-download"></i> Export
+                    </button>
+                </div>
+                
+                <div class="timeline-container">
+                    <div class="timeline-labels">
+                        <span>Timeline</span>
+                        <span id="time-display">0.0s</span>
+                    </div>
+                    <input type="range" id="timeline-slider" class="timeline-slider" min="0" max="100" value="0">
+                    <div class="timeline-markers">
+                        <span>0s</span>
+                        <span>5s</span>
+                        <span>10s</span>
+                        <span>15s</span>
+                        <span>20s</span>
                     </div>
                 </div>
+            </div>
+            
+            <div class="control-section">
+                <h3><i class="fas fa-cog"></i> Advanced Settings</h3>
+                <div class="settings-grid">
+                    <div class="setting-item">
+                        <label>Opacity</label>
+                        <input type="range" id="opacity-slider" min="0" max="100" value="80">
+                    </div>
+                    <div class="setting-item">
+                        <label>Sensitivity</label>
+                        <input type="range" id="sensitivity-slider" min="1" max="10" value="5">
+                    </div>
+                    <div class="setting-item">
+                        <label>Animation Speed</label>
+                        <input type="range" id="speed-slider" min="0.1" max="3" step="0.1" value="1">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Visualization Area -->
+        <div class="main-visualization">
+            <!-- 3D Brain Container -->
+            <div class="brain-container">
+                <div id="brain-canvas" class="brain-canvas"></div>
                 
-                <div class="chart-container" id="chart-container">
-                    <canvas id="eeg-chart" class="chart-canvas"></canvas>
+                <!-- Video Background Options -->
+                <div class="video-backgrounds">
+                    <video id="brain-video-1" class="brain-video" loop muted>
+                        <source src="brain_video_1.mp4" type="video/mp4">
+                    </video>
+                    <video id="brain-video-2" class="brain-video" loop muted>
+                        <source src="brain_video_2.mp4" type="video/mp4">
+                    </video>
+                    <video id="brain-video-3" class="brain-video" loop muted>
+                        <source src="brain_video_3.mp4" type="video/mp4">
+                    </video>
+                    <video id="brain-video-4" class="brain-video" loop muted>
+                        <source src="brain_video_4.mp4" type="video/mp4">
+                    </video>
+                    <video id="brain-video-5" class="brain-video" loop muted>
+                        <source src="brain_video_5.mp4" type="video/mp4">
+                    </video>
                 </div>
                 
-                <div class="side-panel">
-                    <div class="info-card">
-                        <h3 class="info-title">Brain Activity</h3>
-                        <div class="activity-meters">
-                            <div class="meter-item">
-                                <label>Alpha Waves</label>
-                                <div class="meter-bar">
-                                    <div class="meter-fill alpha" id="alpha-meter"></div>
-                                </div>
+                <!-- Interactive Overlays -->
+                <div class="brain-overlays">
+                    <div class="electrode-tooltip" id="electrode-tooltip">
+                        <div class="tooltip-header">
+                            <span class="electrode-name">Fp1</span>
+                            <span class="electrode-status active">Active</span>
+                        </div>
+                        <div class="tooltip-content">
+                            <div class="metric">
+                                <span>Amplitude:</span>
+                                <span class="value">125.4 μV</span>
                             </div>
-                            <div class="meter-item">
-                                <label>Beta Waves</label>
-                                <div class="meter-bar">
-                                    <div class="meter-fill beta" id="beta-meter"></div>
-                                </div>
+                            <div class="metric">
+                                <span>Frequency:</span>
+                                <span class="value">12.8 Hz</span>
                             </div>
-                            <div class="meter-item">
-                                <label>Theta Waves</label>
-                                <div class="meter-bar">
-                                    <div class="meter-fill theta" id="theta-meter"></div>
-                                </div>
-                            </div>
-                            <div class="meter-item">
-                                <label>Delta Waves</label>
-                                <div class="meter-bar">
-                                    <div class="meter-fill delta" id="delta-meter"></div>
-                                </div>
+                            <div class="metric">
+                                <span>Activity:</span>
+                                <span class="value">High</span>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="info-card">
-                        <h3 class="info-title">Data Summary</h3>
-                        <div id="data-summary" class="summary-content">
-                            No data loaded
-                        </div>
-                    </div>
-                    
-                    <div class="info-card">
-                        <h3 class="info-title">Electrode Map</h3>
-                        <div id="electrode-map" class="electrode-grid">
-                            <!-- EEG electrode positions will be populated here -->
+                    <div class="brain-regions-panel">
+                        <h4>Brain Regions</h4>
+                        <div class="region-list">
+                            <div class="region-item" data-region="frontal">
+                                <span class="region-color frontal-color"></span>
+                                <span>Frontal Cortex</span>
+                                <span class="region-activity">85%</span>
+                            </div>
+                            <div class="region-item" data-region="parietal">
+                                <span class="region-color parietal-color"></span>
+                                <span>Parietal Cortex</span>
+                                <span class="region-activity">62%</span>
+                            </div>
+                            <div class="region-item" data-region="temporal">
+                                <span class="region-color temporal-color"></span>
+                                <span>Temporal Cortex</span>
+                                <span class="region-activity">74%</span>
+                            </div>
+                            <div class="region-item" data-region="occipital">
+                                <span class="region-color occipital-color"></span>
+                                <span>Occipital Cortex</span>
+                                <span class="region-activity">58%</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </main>
+            
+            <!-- Side Analysis Panel -->
+            <div class="analysis-panel">
+                <!-- Real-time Metrics -->
+                <div class="metrics-section">
+                    <h3><i class="fas fa-chart-line"></i> Real-time Metrics</h3>
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-value" id="alpha-power">8.4</div>
+                            <div class="metric-label">Alpha Power</div>
+                            <div class="metric-bar">
+                                <div class="metric-fill alpha-fill" style="width: 84%"></div>
+                            </div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" id="beta-power">6.2</div>
+                            <div class="metric-label">Beta Power</div>
+                            <div class="metric-bar">
+                                <div class="metric-fill beta-fill" style="width: 62%"></div>
+                            </div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" id="theta-power">4.8</div>
+                            <div class="metric-label">Theta Power</div>
+                            <div class="metric-bar">
+                                <div class="metric-fill theta-fill" style="width: 48%"></div>
+                            </div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" id="gamma-power">9.1</div>
+                            <div class="metric-label">Gamma Power</div>
+                            <div class="metric-bar">
+                                <div class="metric-fill gamma-fill" style="width: 91%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Connectivity Matrix -->
+                <div class="connectivity-section">
+                    <h3><i class="fas fa-project-diagram"></i> Neural Connectivity</h3>
+                    <div class="connectivity-matrix" id="connectivity-matrix">
+                        <!-- Matrix will be generated by JavaScript -->
+                    </div>
+                </div>
+                
+                <!-- Electrode Status -->
+                <div class="electrode-section">
+                    <h3><i class="fas fa-map-pin"></i> Electrode Status</h3>
+                    <div class="electrode-grid" id="electrode-grid">
+                        <!-- Electrode status will be populated by JavaScript -->
+                    </div>
+                </div>
+                
+                <!-- Data Analysis -->
+                <div class="analysis-results">
+                    <h3><i class="fas fa-microscope"></i> Analysis Results</h3>
+                    <div id="analysis-output" class="analysis-output">
+                        <div class="analysis-item">
+                            <strong>Dominant Frequency:</strong> 10.2 Hz (Alpha)
+                        </div>
+                        <div class="analysis-item">
+                            <strong>Peak Activity:</strong> Frontal-Parietal Network
+                        </div>
+                        <div class="analysis-item">
+                            <strong>Coherence:</strong> High (0.84)
+                        </div>
+                        <div class="analysis-item">
+                            <strong>Asymmetry Index:</strong> 0.12 (Normal)
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     
     <script type="module" src="main.js"></script>
