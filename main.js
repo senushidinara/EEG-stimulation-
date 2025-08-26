@@ -1,5 +1,4 @@
 // Advanced EEG Sleep Monitor - Completely Functional with Real Signal Processing
-import { FFT } from './node_modules/fft-js/lib/fft.js';
 
 class AdvancedEEGSleepMonitor {
     constructor() {
