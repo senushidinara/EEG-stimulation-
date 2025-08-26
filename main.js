@@ -1113,63 +1113,89 @@ class AdvancedEEGSleepMonitor {
 
     switchTab(tabName) {
         console.log(`📱 Switching to tab: ${tabName}`);
-        
-        // Update navigation states with animation
-        document.querySelectorAll('.nav-item').forEach(item => {
-            item.classList.remove('active');
-            item.style.transform = 'scale(1)';
-        });
-        
-        const activeNavItem = document.querySelector(`[data-tab="${tabName}"]`);
-        if (activeNavItem) {
-            activeNavItem.classList.add('active');
-            activeNavItem.style.transform = 'scale(1.05)';
-            setTimeout(() => {
-                activeNavItem.style.transform = 'scale(1)';
-            }, 200);
+
+        // Store current tab
+        this.currentTab = tabName;
+
+        // Update navigation visual state
+        this.setActiveNavTab(tabName);
+
+        // Hide all content first
+        this.hideAllContent();
+
+        // Show the appropriate content
+        if (tabName === 'home') {
+            this.showHomeTab();
+        } else {
+            this.showOtherTab(tabName);
         }
-        
+
+        this.showNotification(`📋 Switched to ${tabName.replace('-', ' ')} view`, 'info');
+        console.log(`✅ Tab switch completed: ${tabName}`);
+    }
+
+    hideAllContent() {
+        // Hide main dashboard
+        const mainDashboard = document.querySelector('.main-dashboard');
+        if (mainDashboard) {
+            mainDashboard.style.display = 'none';
+            mainDashboard.style.opacity = '0';
+        }
+
         // Hide all tab contents
         document.querySelectorAll('.tab-content').forEach(content => {
             content.style.display = 'none';
             content.style.opacity = '0';
         });
-        
-        // Show/hide main dashboard
+    }
+
+    showHomeTab() {
         const mainDashboard = document.querySelector('.main-dashboard');
-        
-        if (tabName === 'home') {
-            if (mainDashboard) {
-                mainDashboard.style.display = 'grid';
+        if (mainDashboard) {
+            mainDashboard.style.display = 'grid';
+            // Use a small delay to ensure smooth transition
+            setTimeout(() => {
                 mainDashboard.style.opacity = '1';
-            }
-        } else {
-            if (mainDashboard) {
-                mainDashboard.style.display = 'none';
-            }
-            
-            const targetContent = document.getElementById(`${tabName}-content`);
-            if (targetContent) {
-                targetContent.style.display = 'block';
-                setTimeout(() => {
-                    targetContent.style.opacity = '1';
-                }, 50);
-                
-                // Initialize tab-specific content
-                setTimeout(() => {
-                    if (tabName === 'brain-regions') {
-                        this.initializeRegionPlots();
-                    } else if (tabName === 'sleep-stages') {
-                        this.initializeSleepStagePlots();
-                    } else if (tabName === 'reports') {
-                        this.initializeReportsTab();
-                    }
-                }, 100);
-            }
+            }, 10);
         }
-        
-        this.currentTab = tabName;
-        this.showNotification(`📋 Switched to ${tabName.replace('-', ' ')} view`, 'info');
+        console.log('🏠 Home dashboard shown');
+    }
+
+    showOtherTab(tabName) {
+        const targetContent = document.getElementById(`${tabName}-content`);
+        if (targetContent) {
+            targetContent.style.display = 'block';
+
+            // Smooth transition
+            setTimeout(() => {
+                targetContent.style.opacity = '1';
+            }, 10);
+
+            // Initialize tab-specific content
+            setTimeout(() => {
+                this.initializeTabContent(tabName);
+            }, 100);
+
+            console.log(`📋 Tab content shown: ${tabName}`);
+        } else {
+            console.warn(`❌ Tab content not found: ${tabName}-content`);
+        }
+    }
+
+    initializeTabContent(tabName) {
+        switch (tabName) {
+            case 'brain-regions':
+                this.initializeRegionPlots();
+                break;
+            case 'sleep-stages':
+                this.initializeSleepStagePlots();
+                break;
+            case 'reports':
+                this.initializeReportsTab();
+                break;
+            default:
+                console.log(`No special initialization for tab: ${tabName}`);
+        }
     }
 
     async initializeRegionPlots() {
