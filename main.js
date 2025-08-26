@@ -1814,13 +1814,66 @@ window.debugEEG = function() {
     console.log('- Data samples:', window.eegMonitor?.data?.time?.length);
     console.log('- Real data loaded:', !!window.eegMonitor?.realEEGData);
     console.log('- Detected events:', window.eegMonitor?.detectedEvents?.length || 0);
-    
+
+    // Check DOM elements
+    const navItems = document.querySelectorAll('.nav-item');
+    const bandToggles = document.querySelectorAll('.band-toggle');
+    const playBtn = document.getElementById('play-pause-btn');
+    const loadBtn = document.getElementById('load-real-data-btn');
+    const detectBtn = document.getElementById('detect-events-btn');
+    const mainDashboard = document.querySelector('.main-dashboard');
+
+    console.log('📱 Navigation items found:', navItems.length);
+    navItems.forEach((item, i) => {
+        const tab = item.getAttribute('data-tab');
+        const isActive = item.classList.contains('active');
+        console.log(`  ${i}: ${tab} - ${isActive ? 'ACTIVE' : 'inactive'}`);
+    });
+
+    console.log('🎚️ Band toggles found:', bandToggles.length);
+    console.log('🔘 Play button found:', !!playBtn);
+    console.log('🔘 Load button found:', !!loadBtn);
+    console.log('🔘 Detect button found:', !!detectBtn);
+    console.log('🏠 Main dashboard found:', !!mainDashboard);
+    console.log('🏠 Main dashboard display:', mainDashboard?.style.display);
+    console.log('🏠 Main dashboard opacity:', mainDashboard?.style.opacity);
+
     return {
-        switchTab: (tab) => window.eegMonitor?.switchTab(tab),
-        setBand: (band) => window.eegMonitor?.setActiveBand(band),
-        togglePlay: () => window.eegMonitor?.togglePlayback(),
-        detectEvents: () => window.eegMonitor?.detectSleepEvents(),
-        loadData: () => window.eegMonitor?.loadRealEEGData()
+        switchTab: (tab) => {
+            console.log(`🔧 Manual tab switch to: ${tab}`);
+            return window.eegMonitor?.switchTab(tab);
+        },
+        setBand: (band) => {
+            console.log(`🔧 Manual band switch to: ${band}`);
+            return window.eegMonitor?.setActiveBand(band);
+        },
+        togglePlay: () => {
+            console.log('🔧 Manual play toggle');
+            return window.eegMonitor?.togglePlayback();
+        },
+        detectEvents: () => {
+            console.log('🔧 Manual event detection');
+            return window.eegMonitor?.detectSleepEvents();
+        },
+        loadData: () => {
+            console.log('🔧 Manual data load');
+            return window.eegMonitor?.loadRealEEGData();
+        },
+        testNavigation: () => {
+            console.log('🧪 Testing navigation...');
+            const tabs = ['home', 'brain-regions', 'sleep-stages', 'reports'];
+            tabs.forEach((tab, i) => {
+                setTimeout(() => {
+                    console.log(`🧪 Testing tab: ${tab}`);
+                    window.eegMonitor?.switchTab(tab);
+                }, i * 1000);
+            });
+        },
+        fixNavigation: () => {
+            console.log('🔧 Attempting to fix navigation...');
+            window.eegMonitor?.setupNavigationControls();
+            window.eegMonitor?.switchTab('home');
+        }
     };
 };
 
