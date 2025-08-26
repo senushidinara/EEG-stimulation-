@@ -53,20 +53,42 @@ class AdvancedEEGSleepMonitor {
 
     async init() {
         console.log('🧠 Initializing Advanced EEG Sleep Monitor...');
-        
+
         try {
             await this.waitForDependencies();
-            this.setupEventListeners();
+            console.log('📦 Dependencies loaded');
+
             await this.loadAndProcessRealData();
+            console.log('📊 Data processing complete');
+
             this.generateAdvancedEEGData();
-            this.initializeAllPlots();
+            console.log('🧬 EEG data generated');
+
+            await this.initializeAllPlots();
+            console.log('📈 Plots initialized');
+
             this.showMainDashboard();
+            console.log('🏠 Dashboard shown');
+
+            this.setupEventListeners();
+            console.log('🎛️ Event listeners setup');
+
             this.startRealTimeAnalysis();
+            console.log('⚡ Real-time analysis started');
+
             this.updateUIElements();
-            
+            console.log('🎨 UI elements updated');
+
             this.isInitialized = true;
             console.log('✅ Advanced EEG Monitor initialized successfully');
             this.showNotification('🧠 EEG Monitor Ready - All systems functional!', 'success');
+
+            // Force initial home tab state
+            setTimeout(() => {
+                this.switchTab('home');
+                console.log('🔄 Forced home tab activation');
+            }, 500);
+
         } catch (error) {
             console.error('❌ Initialization error:', error);
             this.showNotification('⚠️ Some features may be limited', 'warning');
