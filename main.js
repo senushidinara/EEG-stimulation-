@@ -136,6 +136,11 @@ class AdvancedEEGSleepMonitor {
     }
 
     setupEventListeners() {
+        if (this.listenersSetup) {
+            console.log('🎛️ Event listeners already setup, skipping...');
+            return;
+        }
+
         console.log('🎛️ Setting up event listeners...');
 
         // Wait for DOM to be ready
@@ -144,9 +149,9 @@ class AdvancedEEGSleepMonitor {
             this.setupPlaybackControls();
             this.setupTimelineControls();
             this.setupNavigationControls();
+            this.listenersSetup = true;
+            console.log('✅ Event listeners setup completed');
         }, 100);
-
-        console.log('✅ Event listeners setup initiated');
     }
 
     setupBandToggles() {
