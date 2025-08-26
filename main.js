@@ -39,7 +39,8 @@ class AdvancedEEGSleepMonitor {
         this.detectedEvents = [];
         this.currentSleepStage = 'N2';
         this.stageHistory = [];
-        
+        this.listenersSetup = false;
+
         // Brain region mappings
         this.brainRegions = {
             frontal: ['Fp1', 'Fp2', 'F3', 'F4', 'F7', 'F8'],
@@ -47,7 +48,7 @@ class AdvancedEEGSleepMonitor {
             parietal: ['P3', 'P4', 'Pz'],
             occipital: ['O1', 'O2']
         };
-        
+
         this.init();
     }
 
