@@ -89,20 +89,27 @@ class AdvancedEEGSleepMonitor {
     }
 
     showMainDashboard() {
-        // Always show the main dashboard
-        const dashboard = document.querySelector('.main-dashboard');
-        if (dashboard) {
-            dashboard.style.display = 'grid';
-        }
-        
         // Hide user setup modal
         const modal = document.getElementById('user-setup-modal');
         if (modal) {
             modal.style.display = 'none';
         }
-        
-        // Set home tab as active
-        this.switchTab('home');
+
+        // Ensure all tab contents are hidden first
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.style.display = 'none';
+            content.style.opacity = '0';
+        });
+
+        // Show the main dashboard and set home as active
+        const dashboard = document.querySelector('.main-dashboard');
+        if (dashboard) {
+            dashboard.style.display = 'grid';
+            dashboard.style.opacity = '1';
+        }
+
+        // Set home tab as active with proper state
+        this.setActiveNavTab('home');
     }
 
     setupEventListeners() {
