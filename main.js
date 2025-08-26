@@ -114,25 +114,44 @@ class AdvancedEEGSleepMonitor {
 
     setupEventListeners() {
         console.log('🎛️ Setting up event listeners...');
-        
-        // Band filter toggles with improved event handling
+
+        // Wait for DOM to be ready
+        setTimeout(() => {
+            this.setupBandToggles();
+            this.setupPlaybackControls();
+            this.setupTimelineControls();
+            this.setupNavigationControls();
+        }, 100);
+
+        console.log('✅ Event listeners setup initiated');
+    }
+
+    setupBandToggles() {
         const bandToggles = document.querySelectorAll('.band-toggle');
-        bandToggles.forEach(btn => {
+        console.log('🎚️ Setting up band toggles:', bandToggles.length);
+
+        bandToggles.forEach((btn, index) => {
             const band = btn.getAttribute('data-band');
-            btn.addEventListener('click', (e) => {
+            // Remove any existing listeners
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+
+            newBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 console.log(`🎚️ Band selected: ${band}`);
                 this.setActiveBand(band);
             });
         });
+    }
 
-        // Enhanced playback controls
+    setupPlaybackControls() {
         this.setupButton('play-pause-btn', () => this.togglePlayback());
         this.setupButton('load-real-data-btn', () => this.loadRealEEGData());
         this.setupButton('detect-events-btn', () => this.detectSleepEvents());
+    }
 
-        // Timeline controls with smooth updates
+    setupTimelineControls() {
         const timelineSlider = document.getElementById('timeline-slider');
         if (timelineSlider) {
             timelineSlider.addEventListener('input', (e) => {
@@ -141,7 +160,6 @@ class AdvancedEEGSleepMonitor {
             });
         }
 
-        // Playback speed control
         const speedSelect = document.getElementById('playback-speed');
         if (speedSelect) {
             speedSelect.addEventListener('change', (e) => {
@@ -149,20 +167,43 @@ class AdvancedEEGSleepMonitor {
                 console.log(`⚡ Playback speed: ${this.playSpeed}x`);
             });
         }
+    }
 
-        // Enhanced navigation
+    setupNavigationControls() {
         const navItems = document.querySelectorAll('.nav-item');
-        navItems.forEach(item => {
+        console.log('📱 Setting up navigation items:', navItems.length);
+
+        navItems.forEach((item, index) => {
             const tab = item.getAttribute('data-tab');
-            item.addEventListener('click', (e) => {
+
+            // Remove any existing listeners by cloning
+            const newItem = item.cloneNode(true);
+            item.parentNode.replaceChild(newItem, item);
+
+            newItem.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                console.log(`📱 Tab selected: ${tab}`);
+                console.log(`📱 Tab clicked: ${tab}`);
                 this.switchTab(tab);
             });
+
+            console.log(`📱 Nav item ${index} setup: ${tab}`);
+        });
+    }
+
+    setActiveNavTab(tabName) {
+        // Update navigation visual state
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.classList.remove('active');
         });
 
-        console.log('✅ Event listeners configured');
+        const activeNavItem = document.querySelector(`[data-tab="${tabName}"]`);
+        if (activeNavItem) {
+            activeNavItem.classList.add('active');
+            console.log(`📱 Set active tab: ${tabName}`);
+        } else {
+            console.warn(`📱 Nav item not found for tab: ${tabName}`);
+        }
     }
 
     setupButton(id, callback) {
