@@ -1367,11 +1367,11 @@ class AdvancedEEGSleepMonitor {
                 signal += Math.sin(2 * Math.PI * 2 * t) * 25; // Delta background
                 // Sleep spindle burst
                 if (t > 3 && t < 4.5) {
-                    signal += Math.sin(2 * Math.PI * 14 * t) * 30 * Math.exp(-(t-3.75)**2/0.1);
+                    signal += Math.sin(2 * Math.PI * 14 * t) * 30 * Math.exp(-Math.pow(t-3.75, 2)/0.1);
                 }
                 // K-complex
                 if (t > 6 && t < 7) {
-                    signal += -40 * Math.exp(-(t-6.5)**2/0.02);
+                    signal += -40 * Math.exp(-Math.pow(t-6.5, 2)/0.02);
                 }
                 break;
             case 'n3':
